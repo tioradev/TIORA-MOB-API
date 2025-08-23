@@ -11,9 +11,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestController
 @RequestMapping("/api/mobile/customers")
 public class CustomerController {
+    private static final Logger logger = LoggerFactory.getLogger(CustomerController.class);
 
     @Autowired
     private CustomerService customerService;
@@ -21,14 +25,19 @@ public class CustomerController {
     @GetMapping("/profile")
     public ResponseEntity<CustomerProfileResponse> getCustomerProfile(
             @RequestHeader("Authorization") String token) {
-        return ResponseEntity.ok(customerService.getCustomerProfile(token));
+        logger.info("getCustomerProfile called");
+        CustomerProfileResponse response = customerService.getCustomerProfile(token);
+        logger.info("getCustomerProfile response: {}", response);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/profile")
     public ResponseEntity<Map<String, String>> updateProfile(
             @RequestBody ProfileUpdateRequest request,
             @RequestHeader("Authorization") String token) {
+        logger.info("updateProfile called with request: {}", request);
         customerService.updateCustomerProfile(token, request);
+        logger.info("Profile updated successfully");
         return ResponseEntity.ok(Map.of("message", "Profile updated successfully"));
     }
 }

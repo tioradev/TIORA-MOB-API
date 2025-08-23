@@ -18,8 +18,12 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class AuthService {
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     private static final String INVALIDATED_TOKENS_CACHE = "invalidatedTokens";
     private static final String CUSTOMER_ID_CLAIM = "customerId";
@@ -38,6 +42,7 @@ public class AuthService {
 
     /**
      * Verify OTP and generate JWT token if valid
+     * Logging added for OTP verification and token generation
      */
     public JwtResponse verifyOtpAndGenerateToken(String phoneNumber, String otp) {
         // Verify OTP

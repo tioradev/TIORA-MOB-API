@@ -22,8 +22,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class EmployeeService {
+    private static final Logger logger = LoggerFactory.getLogger(EmployeeService.class);
 
     @Autowired
     private BarberRepository barberRepository;
@@ -33,12 +37,15 @@ public class EmployeeService {
 
 
     public BarberResponse getBarberById(Long barberId) {
+        logger.info("getBarberById called with barberId: {}", barberId);
         // Find barber by ID
         Employee employee = barberRepository.findById(barberId)
                 .orElseThrow(() -> new ResourceNotFoundException("Barber" + "id " + barberId));
 
         // Map to response DTO
-        return mapToBarberResponse(employee);
+        BarberResponse response = mapToBarberResponse(employee);
+        logger.info("getBarberById response: {}", response);
+        return response;
     }
 
 
@@ -58,10 +65,13 @@ public class EmployeeService {
 
 
     public List<BarberResponse> getBarbersBySalon(Long salonId) {
+        logger.info("getBarbersBySalon called with salonId: {}", salonId);
         List<Employee> employees = barberRepository.findBySalonIdAndIsActiveTrue(salonId);
-        return employees.stream()
+        List<BarberResponse> responses = employees.stream()
                 .map(this::mapToBarberResponse)
                 .collect(Collectors.toList());
+        logger.info("getBarbersBySalon response count: {}", responses.size());
+        return responses;
     }
 
 

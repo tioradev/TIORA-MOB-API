@@ -20,8 +20,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class CustomerService {
+    private static final Logger logger = LoggerFactory.getLogger(CustomerService.class);
 
     @Autowired
     private CustomerRepository customerRepository;
@@ -36,6 +40,7 @@ public class CustomerService {
      * Get customer profile details
      */
     public CustomerProfileResponse getCustomerProfile(String token) {
+        logger.info("getCustomerProfile called with token: {}", token);
         Long customerId = authService.getCustomerIdFromToken(token);
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new UnauthorizedException("Customer not found"));
@@ -69,11 +74,13 @@ public class CustomerService {
 //                .max(Comparator.comparing(Appointment::getAppointmentDate))
 //                .ifPresent(a -> response.setLastVisit(a.getAppointmentDate()));
 
+        logger.info("getCustomerProfile response: {}", response);
         return response;
     }
 
     @Transactional
     public void updateCustomerProfile(String token, ProfileUpdateRequest request) {
+        logger.info("updateCustomerProfile called with token: {}, request: {}", token, request);
         Long customerId = authService.getCustomerIdFromToken(token);
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
@@ -84,6 +91,7 @@ public class CustomerService {
         customer.setUpdatedAt(LocalDateTime.now());
 
         customerRepository.save(customer);
+        logger.info("Customer profile updated for id: {}", customerId);
     }
 
     public Customer getCustomerById(Long id) {
