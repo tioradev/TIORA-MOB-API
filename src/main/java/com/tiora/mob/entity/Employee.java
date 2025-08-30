@@ -1,6 +1,6 @@
 package com.tiora.mob.entity;
 
-import com.salon.web.util.StringListConverter;
+import com.tiora.mob.util.JsonObjectListConverter;
 import com.tiora.mob.entity.Appointment;
 import com.tiora.mob.entity.Branch;
 import com.tiora.mob.entity.EmployeeSchedule;
@@ -30,6 +30,16 @@ import java.util.List;
 @Table(name = "employees")
 @EntityListeners(AuditingEntityListener.class)
 public class Employee {
+    public Long getEmployeeId() { return employeeId; }
+    public String getFirstName() { return firstName; }
+    public String getLastName() { return lastName; }
+    public String getEmail() { return email; }
+    public String getPhoneNumber() { return phoneNumber; }
+    public List<java.util.Map<String, Object>> getSpecializations() { return specializations; }
+    public Integer getRatings() { return ratings; }
+    public String getProfileImageUrl() { return profileImageUrl; }
+    public EmployeeStatus getStatus() { return status; }
+    public Role getRole() { return role; }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -96,9 +106,9 @@ public class Employee {
     private Integer ratings;
 
     @Column(name = "specializations", columnDefinition = "jsonb")
-    @Convert(converter = StringListConverter.class)
+    @Convert(converter = JsonObjectListConverter.class)
     @JdbcTypeCode(SqlTypes.JSON)
-    private List<String> specializations = new ArrayList<>();
+    private List<java.util.Map<String, Object>> specializations = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "serves_gender")

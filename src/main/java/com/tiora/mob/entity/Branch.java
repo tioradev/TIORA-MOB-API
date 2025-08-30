@@ -1,6 +1,5 @@
 package com.tiora.mob.entity;
 
-
 import com.tiora.mob.config.WeeklyScheduleConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -9,9 +8,10 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+// ...existing code up to imports...
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -63,6 +63,10 @@ public class Branch {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "salon_type", nullable = false, length = 20)
+    private SalonType salonType;
     
 
     // Utility methods
@@ -78,5 +82,8 @@ public class Branch {
     
     public enum BranchStatus {
         ACTIVE, INACTIVE, TEMPORARILY_CLOSED, PERMANENTLY_CLOSED
+    }
+    public enum SalonType {
+        GENTS, LADIES, UNISEX
     }
 }

@@ -1,4 +1,4 @@
-package com.salon.web.util;
+package com.tiora.mob.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -14,6 +14,7 @@ public class StringListConverter implements AttributeConverter<List<String>, Str
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+
     @Override
     public String convertToDatabaseColumn(List<String> attribute) {
         if (attribute == null || attribute.isEmpty()) {
@@ -22,11 +23,13 @@ public class StringListConverter implements AttributeConverter<List<String>, Str
         try {
             return objectMapper.writeValueAsString(attribute);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to convert List<String> to JSON", e);
+            // Log the error or rethrow as a more specific exception if needed
+            throw new IllegalArgumentException("Could not convert List<String> to JSON string", e);
         }
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public List<String> convertToEntityAttribute(String dbData) {
         if (dbData == null || dbData.trim().isEmpty()) {
             return new ArrayList<>();
@@ -34,7 +37,8 @@ public class StringListConverter implements AttributeConverter<List<String>, Str
         try {
             return objectMapper.readValue(dbData, new TypeReference<List<String>>() {});
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to convert JSON to List<String>", e);
+            // Log the error or rethrow as a more specific exception if needed
+            throw new IllegalArgumentException("Could not convert JSON string to List<String>", e);
         }
     }
 }

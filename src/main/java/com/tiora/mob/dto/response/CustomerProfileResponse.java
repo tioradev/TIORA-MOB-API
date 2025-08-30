@@ -13,6 +13,14 @@ public class CustomerProfileResponse {
     private LocalDateTime lastVisit;
     private LocalDateTime memberSince;
     private boolean profileComplete;
+    private String profileImageUrl;
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
 
     // Getters and setters
     public Long getId() {

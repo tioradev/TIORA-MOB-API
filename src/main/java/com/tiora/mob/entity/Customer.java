@@ -19,10 +19,55 @@ import java.util.List;
 @Table(name = "customers")
 @EntityListeners(AuditingEntityListener.class)
 public class Customer {
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public java.time.LocalDate getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(java.time.LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    public Gender getGender() { return gender; }
+    public void setGender(Gender gender) { this.gender = gender; }
+    public CustomerStatus getStatus() { return status; }
+    public void setStatus(CustomerStatus status) { this.status = status; }
+    public Integer getTotalVisits() { return totalVisits; }
+    public void setTotalVisits(Integer totalVisits) { this.totalVisits = totalVisits; }
+    public java.math.BigDecimal getTotalSpent() { return totalSpent; }
+    public void setTotalSpent(java.math.BigDecimal totalSpent) { this.totalSpent = totalSpent; }
+    public Integer getLoyaltyPoints() { return loyaltyPoints; }
+    public void setLoyaltyPoints(Integer loyaltyPoints) { this.loyaltyPoints = loyaltyPoints; }
+    public CustomerTier getCustomerTier() { return customerTier; }
+    public void setCustomerTier(CustomerTier customerTier) { this.customerTier = customerTier; }
+    public LocalDateTime getLastVisitDate() { return lastVisitDate; }
+    public void setLastVisitDate(LocalDateTime lastVisitDate) { this.lastVisitDate = lastVisitDate; }
+    public String getPreferredStylist() { return preferredStylist; }
+    public void setPreferredStylist(String preferredStylist) { this.preferredStylist = preferredStylist; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
+    public Boolean getNewsletterSubscribed() { return newsletterSubscribed; }
+    public void setNewsletterSubscribed(Boolean newsletterSubscribed) { this.newsletterSubscribed = newsletterSubscribed; }
+    public Boolean getSmsNotifications() { return smsNotifications; }
+    public void setSmsNotifications(Boolean smsNotifications) { this.smsNotifications = smsNotifications; }
+    public String getProfileImageUrl() { return profileImageUrl; }
+    public void setProfileImageUrl(String profileImageUrl) { this.profileImageUrl = profileImageUrl; }
+    public List<Appointment> getAppointments() { return appointments; }
+    public void setAppointments(List<Appointment> appointments) { this.appointments = appointments; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "phone_number", unique = true, nullable = false, length = 15)
+    private String phoneNumber;
 
     @Column(name = "first_name", nullable = false, length = 50)
     private String firstName;
@@ -33,8 +78,6 @@ public class Customer {
     @Column(unique = true, nullable = false, length = 100)
     private String email;
 
-    @Column(name = "phone_number", unique = true, nullable = false, length = 15)
-    private String phoneNumber;
 
     @Column(name = "date_of_birth")
     private java.time.LocalDate dateOfBirth;
@@ -42,14 +85,6 @@ public class Customer {
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
-    @Column(length = 1000)
-    private String address;
-
-    @Column(length = 50)
-    private String city;
-
-    @Column(length = 20)
-    private String pincode;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

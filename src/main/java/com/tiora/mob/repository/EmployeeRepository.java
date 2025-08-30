@@ -22,6 +22,9 @@ import com.tiora.mob.entity.Employee.EmployeeStatus;
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
+        // Find available barbers by serviceId in specialization_services (JSON) and servesGender
+                        @Query(value = "SELECT * FROM employees WHERE status = 'ACTIVE' AND role = 'BARBER' AND serves_gender = :gender AND branch_id = :branchId AND specializations @> CAST(:serviceJson AS jsonb)", nativeQuery = true)
+                        List<Employee> findAvailableBarbersByServiceAndGenderAndBranch(@Param("serviceJson") String serviceJson, @Param("gender") String gender, @Param("branchId") Long branchId);
     // Find by salon
     List<Employee> findBySalonOrderByFirstName(Salon salon);
 

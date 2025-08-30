@@ -6,6 +6,17 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public class ProfileUpdateRequest {
+
+    @NotBlank(message = "Phone number is required")
+    @Size(max = 15, message = "Phone number cannot exceed 15 characters")
+    private String phoneNumber;
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
     @NotBlank(message = "First name is required")
     @Size(max = 50, message = "First name cannot exceed 50 characters")
     private String firstName;
@@ -19,9 +30,6 @@ public class ProfileUpdateRequest {
     private String email;
 
     // Optional fields
-    private String address;
-    private String city;
-    private String pincode;
     private String gender;
 
     // Getters and setters
@@ -49,29 +57,6 @@ public class ProfileUpdateRequest {
         this.email = email;
     }
 
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public String getCity() {
-        return city;
-    }
-
-    public void setCity(String city) {
-        this.city = city;
-    }
-
-    public String getPincode() {
-        return pincode;
-    }
-
-    public void setPincode(String pincode) {
-        this.pincode = pincode;
-    }
 
     public String getGender() {
         return gender;

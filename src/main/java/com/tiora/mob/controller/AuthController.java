@@ -19,7 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RestController
-@RequestMapping("/api/mobile/auth")
+@io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth")
+@RequestMapping("/mobile/auth")
 public class AuthController {
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 

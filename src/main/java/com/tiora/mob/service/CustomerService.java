@@ -82,16 +82,40 @@ public class CustomerService {
     public void updateCustomerProfile(String token, ProfileUpdateRequest request) {
         logger.info("updateCustomerProfile called with token: {}, request: {}", token, request);
         Long customerId = authService.getCustomerIdFromToken(token);
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-
+        Customer customer = null;
+        if (customerId != null) {
+            customer = customerRepository.findById(customerId).orElse(null);
+        }
+        if (customer == null) {
+            // New user: create new customer
+            customer = new Customer();
+            // id will be auto-generated
+            customer.setPhoneNumber(request.getPhoneNumber());
+            customer.setCreatedAt(LocalDateTime.now());
+        } else {
+            // Existing user: update phone if changed
+            if (request.getPhoneNumber() != null && !request.getPhoneNumber().equals(customer.getPhoneNumber())) {
+                customer.setPhoneNumber(request.getPhoneNumber());
+            }
+        }
         customer.setFirstName(request.getFirstName());
         customer.setLastName(request.getLastName());
         customer.setEmail(request.getEmail());
+        // Do not store address, city, or pincode as per new requirement
+        // Convert gender String to enum if present
+        if (request.getGender() != null) {
+            try {
+                customer.setGender(Customer.Gender.valueOf(request.getGender().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid gender value: {}. Setting to null.", request.getGender());
+                customer.setGender(null);
+            }
+        } else {
+            customer.setGender(null);
+        }
         customer.setUpdatedAt(LocalDateTime.now());
-
         customerRepository.save(customer);
-        logger.info("Customer profile updated for id: {}", customerId);
+        logger.info("Customer profile created/updated for phone: {}", customer.getPhoneNumber());
     }
 
     public Customer getCustomerById(Long id) {

@@ -2,10 +2,12 @@ package com.tiora.mob;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @SpringBootApplication
+@EntityScan(basePackages = "com.tiora.mob.entity")
 public class TioraMobApiApplication {
 	private static final Logger logger = LoggerFactory.getLogger(TioraMobApiApplication.class);
 

@@ -18,6 +18,20 @@ import java.util.List;
 @Entity
 @Table(name = "services")
 public class Service {
+    public Long getId() { return id; }
+    public Integer getDurationMinutes() { return durationMinutes; }
+    public String getName() { return name; }
+    public String getDescription() { return description; }
+    public ServiceCategory getCategory() { return category; }
+    public BigDecimal getPrice() { return price; }
+    public String getImageUrl() { return imageUrl; }
+    public Boolean getIsPopular() { return isPopular; }
+    public ServiceStatus getStatus() { return status; }
+    public GenderAvailability getGenderAvailability() { return genderAvailability; }
+    public BigDecimal getDiscountPercentage() { return discountPercentage; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Salon getSalon() { return salon; }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

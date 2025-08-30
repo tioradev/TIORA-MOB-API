@@ -1,7 +1,5 @@
 package com.tiora.mob.controller;
 
-
-
 import com.tiora.mob.dto.response.BarberResponse;
 import com.tiora.mob.dto.response.TimeSlotResponse;
 import com.tiora.mob.service.AvailabilityService;
@@ -18,10 +16,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RestController
-@RequestMapping("/api/mobile/employee")
+@io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth")
+@RequestMapping("/mobile/employee")
 public class EmployeeController {
+    @GetMapping("/by-service/{serviceId}")
+    public ResponseEntity<List<BarberResponse>> getBarbersByService(
+            @PathVariable Long serviceId,
+            @RequestParam String gender,
+            @RequestParam Long branchId) {
+        logger.info("getBarbersByService called with serviceId: {}, gender: {}, branchId: {}", serviceId, gender, branchId);
+        List<BarberResponse> responses = employeeService.getBarbersByServiceIdGenderAndBranch(serviceId, gender, branchId);
+        logger.info("getBarbersByService response count: {}", responses.size());
+        return ResponseEntity.ok(responses);
+    }
     private static final Logger logger = LoggerFactory.getLogger(EmployeeController.class);
-
     @Autowired
     private EmployeeService employeeService;
 

@@ -10,6 +10,9 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -17,8 +20,10 @@ import java.util.Optional;
 @Service
 public class OtpService {
 
+    private static final Logger logger = LoggerFactory.getLogger(OtpService.class);
+
     private static final String OTP_CACHE = "otpCache";
-    private static final int OTP_LENGTH = 6;
+    private static final int OTP_LENGTH = 4;
     private static final int OTP_VALIDITY_MINUTES = 5;
 
     @Autowired
@@ -34,17 +39,15 @@ public class OtpService {
      * Generate and send OTP to the provided phone number
      */
     public OtpResponse generateAndSendOtp(String phoneNumber) {
-        // Check if customer exists or create a new one
-        Customer customer = customerRepository.findByPhoneNumber(phoneNumber)
-                .orElseGet(() -> {
-                    Customer newCustomer = new Customer();
-                    newCustomer.setPhoneNumber(phoneNumber);
-                    newCustomer.setCreatedAt(LocalDateTime.now());
-                    return customerRepository.save(newCustomer);
-                });
+        // No customer existence check here. OTP is sent regardless of customer existence.
 
-        // Generate OTP
-        String otp = generateOtp();
+        // For testing: always use OTP '1234' for 0771231234
+        String otp;
+        if ("0771231234".equals(phoneNumber)) {
+            otp = "1234"; // <-- Remove this block for production
+        } else {
+            otp = generateOtp();
+        }
 
         // Store OTP in cache with expiration
         getOtpCache().put(phoneNumber, new OtpData(otp, LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES)));
@@ -53,8 +56,9 @@ public class OtpService {
         // For now, we'll just return it in the response for testing
         String message = "OTP has been sent to your phone number";
 
+
         // For development purposes, log the OTP
-        System.out.println("OTP for " + phoneNumber + ": " + otp);
+        logger.info("OTP for {}: {}", phoneNumber, otp);
 
         return new OtpResponse(phoneNumber, message);
     }

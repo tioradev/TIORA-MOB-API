@@ -1,3 +1,4 @@
+// ...existing code...
 package com.tiora.mob.service;
 
 
@@ -5,6 +6,8 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import com.tiora.mob.config.JwtConfig;
 import com.tiora.mob.dto.response.JwtResponse;
+import com.tiora.mob.dto.response.JwtWithCustomerResponse;
+import com.tiora.mob.dto.response.CustomerProfileResponse;
 import com.tiora.mob.entity.Customer;
 import com.tiora.mob.exception.UnauthorizedException;
 import com.tiora.mob.repository.CustomerRepository;
@@ -17,12 +20,27 @@ import org.springframework.util.StringUtils;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Service
 public class AuthService {
+    /**
+     * Generate JWT token for a phone number (for signup flow, no customerId claim)
+     */
+    private String generateTokenForPhone(String phoneNumber) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtConfig.getExpiration());
+
+        return Jwts.builder()
+                .setSubject(phoneNumber)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(jwtConfig.getSecretKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     private static final String INVALIDATED_TOKENS_CACHE = "invalidatedTokens";
@@ -48,17 +66,35 @@ public class AuthService {
         // Verify OTP
         otpService.verifyOtp(phoneNumber, otp);
 
-        // Find or create customer
-        Customer customer = customerRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new UnauthorizedException("Customer not found"));
+        // Check if customer exists
+        Optional<Customer> customerOpt = customerRepository.findByPhoneNumber(phoneNumber);
+        boolean customerExists = customerOpt.isPresent();
 
-        // Generate JWT token
-        String token = generateToken(customer);
-
-        // Check if profile is complete
-        boolean isProfileComplete = isProfileComplete(customer);
-
-        return new JwtResponse(token, isProfileComplete);
+        String token;
+        boolean isProfileComplete = false;
+        if (customerExists) {
+            Customer customer = customerOpt.get();
+            token = generateToken(customer);
+            isProfileComplete = isProfileComplete(customer);
+            // Map Customer to CustomerProfileResponse
+            CustomerProfileResponse profile = new CustomerProfileResponse();
+            profile.setId(customer.getId());
+            profile.setFirstName(customer.getFirstName());
+            profile.setLastName(customer.getLastName());
+            profile.setEmail(customer.getEmail());
+            profile.setPhoneNumber(customer.getPhoneNumber());
+            profile.setGender(customer.getGender() != null ? customer.getGender().name() : null);
+            profile.setMemberSince(customer.getCreatedAt());
+            profile.setLastVisit(customer.getLastVisitDate());
+            // You can set completedAppointments and profileComplete as needed
+            profile.setProfileComplete(isProfileComplete);
+            profile.setProfileImageUrl(customer.getProfileImageUrl());
+            return new JwtWithCustomerResponse(token, isProfileComplete, true, profile);
+        } else {
+            // Generate a token with phone number only (for signup flow)
+            token = generateTokenForPhone(phoneNumber);
+            return new JwtResponse(token, false, false);
+        }
     }
 
     /**
@@ -76,7 +112,8 @@ public class AuthService {
         String newToken = generateToken(customer);
         boolean isProfileComplete = isProfileComplete(customer);
 
-        return new JwtResponse(newToken, isProfileComplete);
+        // Always true here, since refreshToken is only for existing customers
+        return new JwtResponse(newToken, isProfileComplete, true);
     }
 
     /**

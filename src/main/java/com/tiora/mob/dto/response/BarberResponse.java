@@ -18,7 +18,7 @@ public class BarberResponse {
     private String lastName;
     private String email;
     private String phoneNumber;
-    private List<String> specializations;
+    private List<java.util.Map<String, Object>> specializations;
     private Integer ratings;
     private String profileImageUrl;
 
