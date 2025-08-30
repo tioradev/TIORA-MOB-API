@@ -43,13 +43,13 @@ public class AppointmentController {
         return ResponseEntity.ok(responses);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<AppointmentResponse> getAppointmentById(
-            @PathVariable Long id,
+    @GetMapping("/by-number/{appointmentNumber}")
+    public ResponseEntity<AppointmentResponse> getAppointmentByNumber(
+            @PathVariable String appointmentNumber,
             @RequestHeader("Authorization") String token) {
-        logger.info("getAppointmentById called with id: {}", id);
-        AppointmentResponse response = appointmentService.getAppointmentById(token, id);
-        logger.info("getAppointmentById response: {}", response);
+        logger.info("getAppointmentByNumber called with appointmentNumber: {}", appointmentNumber);
+        AppointmentResponse response = appointmentService.getAppointmentByNumber(token, appointmentNumber);
+        logger.info("getAppointmentByNumber response: {}", response);
         return ResponseEntity.ok(response);
     }
 
@@ -62,4 +62,16 @@ public class AppointmentController {
 //        logger.info("Appointment cancelled successfully for id: {}", id);
 //        return ResponseEntity.ok(Map.of("message", "Appointment cancelled successfully"));
 //    }
+    /**
+     * Cancel an appointment due to payment failure. Sets status to CANCELLED and reason to PAYMENTFAILED.
+     */
+    @PostMapping("/{id}/cancel-payment-failed")
+    public ResponseEntity<AppointmentResponse> cancelAppointmentPaymentFailed(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token) {
+        logger.info("cancelAppointmentPaymentFailed called for id: {}", id);
+        AppointmentResponse response = appointmentService.cancelAppointmentPaymentFailed(token, id);
+        logger.info("Appointment cancelled due to payment failure for id: {}", id);
+        return ResponseEntity.ok(response);
+    }
 }

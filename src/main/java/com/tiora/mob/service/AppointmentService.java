@@ -1,3 +1,4 @@
+
 package com.tiora.mob.service;
 
 
@@ -45,11 +46,12 @@ public class AppointmentService {
 
     @Transactional
     public AppointmentResponse createAppointment(String token, AppointmentRequest appointmentRequest) {
-        logger.info("Creating appointment: customer phone={}, serviceIds={}, employeeId={}, salonId={}",
-                appointmentRequest.getCustomerPhone(), appointmentRequest.getServiceIds(), appointmentRequest.getEmployeeId(), appointmentRequest.getSalonId());
+        logger.info("Creating appointment: serviceIds={}, employeeId={}, salonId={}",
+                appointmentRequest.getServiceIds(), appointmentRequest.getEmployeeId(), appointmentRequest.getSalonId());
 
-        // Find or create customer
-        Customer customer = customerService.getCustomerByPhoneNumber(appointmentRequest.getCustomerPhone());
+
+        // Find customer by ID (customerPhone is no longer supported)
+        Customer customer = customerService.getCustomerById(appointmentRequest.getCustomerId());
 
         // Validate and get services
         List<Service> services = new ArrayList<>();
@@ -78,7 +80,6 @@ public class AppointmentService {
 
         // Create appointment for the first service (main appointment)
         Appointment appointment = new Appointment();
-        appointment.setAppointmentNumber(generateAppointmentNumber());
         appointment.setCustomer(customer);
         appointment.setService(services.get(0)); // Set first service as primary
         appointment.setEmployee(employee);
@@ -89,9 +90,23 @@ public class AppointmentService {
         appointment.setServicePrice(totalServicePrice); // Use total price of all services
         appointment.setDiscountAmount(appointmentRequest.getDiscountAmount() != null ? appointmentRequest.getDiscountAmount() : BigDecimal.ZERO);
         appointment.setTaxAmount(BigDecimal.ZERO); // Removed tax amount
-        appointment.setPaymentMethod(null); // Removed payment method
-        appointment.setCustomerNotes(""); // Removed customer notes
-        appointment.setInternalNotes(""); // Removed internal notes
+                // Set payment method if provided
+                if (appointmentRequest.getPaymentMethod() != null) {
+                        try {
+                                appointment.setPaymentMethod(Appointment.PaymentMethod.valueOf(appointmentRequest.getPaymentMethod().toUpperCase()));
+                        } catch (IllegalArgumentException e) {
+                                throw new RuntimeException("Invalid payment method: " + appointmentRequest.getPaymentMethod());
+                        }
+                } else {
+                        appointment.setPaymentMethod(null);
+                }
+                appointment.setCustomerNotes(""); // Removed customer notes
+                appointment.setInternalNotes(""); // Removed internal notes
+
+                // Set rating if provided
+                if (appointmentRequest.getRating() != null) {
+                        appointment.setRating(appointmentRequest.getRating());
+                }
 
         // Calculate total amount (service price - discount, no tax)
         BigDecimal total = totalServicePrice.subtract(appointment.getDiscountAmount());
@@ -100,9 +115,15 @@ public class AppointmentService {
         appointment.setStatus(Appointment.AppointmentStatus.IN_PROGRESS);
         appointment.setPaymentStatus(Appointment.PaymentStatus.PENDING);
 
+        // Set a temporary appointment number to satisfy NOT NULL constraint
+        appointment.setAppointmentNumber("TEMP-" + System.currentTimeMillis());
+        appointment = appointmentRepository.save(appointment);
+        // Generate the final appointment number using id and date
+        String appointmentNumber = generateAppointmentNumber(appointment.getId(), appointment.getAppointmentDate());
+        appointment.setAppointmentNumber(appointmentNumber);
         appointment = appointmentRepository.save(appointment);
         logger.info("Appointment created successfully for customer={}, appointmentNumber={}", customer.getPhoneNumber(), appointment.getAppointmentNumber());
-        return mapToAppointmentResponse(appointment) ;
+        return mapToAppointmentResponse(appointment);
     }
 
     public List<AppointmentResponse> getCustomerAppointments(String token) {
@@ -116,61 +137,80 @@ public class AppointmentService {
                 .collect(Collectors.toList());
     }
 
-    public AppointmentResponse getAppointmentById(String token, Long appointmentId) {
 
-        // Get appointment
-        Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Appointment"+ "id "+appointmentId));
-
-        return mapToAppointmentResponse(appointment);
-    }
+        public AppointmentResponse getAppointmentByNumber(String token, String appointmentNumber) {
+                // Get appointment by business key
+                Appointment appointment = appointmentRepository.findByAppointmentNumber(appointmentNumber)
+                                .orElseThrow(() -> new ResourceNotFoundException("Appointment number "+appointmentNumber));
+                return mapToAppointmentResponse(appointment);
+        }
 
 
 
     private AppointmentResponse mapToAppointmentResponse(Appointment appointment) {
-        AppointmentResponse response = new AppointmentResponse();
-        response.setId(appointment.getId());
-        response.setAppointmentNumber(appointment.getAppointmentNumber());
-        response.setCustomerId(appointment.getCustomer().getId());
-        response.setCustomerName(appointment.getCustomer().getFirstName() + " " + appointment.getCustomer().getLastName());
-        response.setCustomerPhone(appointment.getCustomer().getPhoneNumber());
-        response.setServiceId(appointment.getService().getId());
-        response.setServiceName(appointment.getService().getName());
-        response.setEmployeeId(appointment.getEmployee().getEmployeeId());
-        response.setEmployeeName(appointment.getEmployee().getFirstName() + " " + appointment.getEmployee().getLastName());
-        response.setSalonId(appointment.getSalon().getSalonId());
-        response.setSalonName(appointment.getSalon().getName());
-        response.setAppointmentDate(appointment.getAppointmentDate());
-        response.setEstimatedEndTime(appointment.getEstimatedEndTime());
-        response.setActualStartTime(appointment.getActualStartTime());
-        response.setActualEndTime(appointment.getActualEndTime());
-        response.setStatus(appointment.getStatus());
-        response.setPaymentStatus(appointment.getPaymentStatus());
-        response.setServicePrice(appointment.getServicePrice());
-        response.setDiscountAmount(appointment.getDiscountAmount());
-        response.setTaxAmount(appointment.getTaxAmount());
-        response.setTotalAmount(appointment.getTotalAmount());
-        response.setPaidAmount(appointment.getPaidAmount());
-        response.setPaymentMethod(appointment.getPaymentMethod());
-        response.setCustomerNotes(appointment.getCustomerNotes());
-        response.setInternalNotes(appointment.getInternalNotes());
-        response.setCancellationReason(appointment.getCancellationReason());
-        response.setCancelledBy(appointment.getCancelledBy());
-        response.setCancelledAt(appointment.getCancelledAt());
-        response.setReminderSent(appointment.getReminderSent());
-        response.setConfirmationSent(appointment.getConfirmationSent());
-        response.setRating(appointment.getRating());
-        response.setReview(appointment.getReview());
-        response.setReviewDate(appointment.getReviewDate());
-        response.setCreatedDate(appointment.getCreatedAt());
-        response.setLastModifiedDate(appointment.getUpdatedAt());
-        return response;
+        return AppointmentResponse.builder()
+            .id(appointment.getId())
+            .appointmentNumber(appointment.getAppointmentNumber())
+            .customerId(appointment.getCustomer().getId())
+            .customerName(appointment.getCustomer().getFirstName() + " " + appointment.getCustomer().getLastName())
+            .customerPhone(appointment.getCustomer().getPhoneNumber())
+            .serviceId(appointment.getService().getId())
+            .serviceName(appointment.getService().getName())
+            .employeeId(appointment.getEmployee().getEmployeeId())
+            .employeeName(appointment.getEmployee().getFirstName() + " " + appointment.getEmployee().getLastName())
+            .salonId(appointment.getSalon().getSalonId())
+            .salonName(appointment.getSalon().getName())
+            .appointmentDate(appointment.getAppointmentDate())
+            .estimatedEndTime(appointment.getEstimatedEndTime())
+            .actualStartTime(appointment.getActualStartTime())
+            .actualEndTime(appointment.getActualEndTime())
+            .status(appointment.getStatus())
+            .paymentStatus(appointment.getPaymentStatus())
+            .servicePrice(appointment.getServicePrice())
+            .discountAmount(appointment.getDiscountAmount())
+            .taxAmount(appointment.getTaxAmount())
+            .totalAmount(appointment.getTotalAmount())
+            .paidAmount(appointment.getPaidAmount())
+            .paymentMethod(appointment.getPaymentMethod())
+            .customerNotes(appointment.getCustomerNotes())
+            .internalNotes(appointment.getInternalNotes())
+            .cancellationReason(appointment.getCancellationReason())
+            .cancelledBy(appointment.getCancelledBy())
+            .cancelledAt(appointment.getCancelledAt())
+            .reminderSent(appointment.getReminderSent())
+            .confirmationSent(appointment.getConfirmationSent())
+            .rating(appointment.getRating())
+            .review(appointment.getReview())
+            .reviewDate(appointment.getReviewDate())
+            .createdDate(appointment.getCreatedAt())
+            .lastModifiedDate(appointment.getUpdatedAt())
+            .build();
     }
 
-    // Generate unique appointment number
-    private String generateAppointmentNumber() {
-        String datePrefix = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        long count = appointmentRepository.count() + 1;
-        return String.format("APT-%s-%04d", datePrefix, count);
-    }
+
+        /**
+         * Cancels an appointment due to payment failure. Sets status to CANCELLED and reason to PAYMENTFAILED.
+         */
+        @Transactional
+        public AppointmentResponse cancelAppointmentPaymentFailed(String token, Long appointmentId) {
+                Customer customer = customerService.getCustomerFromToken(token);
+                Appointment appointment = appointmentRepository.findById(appointmentId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + appointmentId));
+                // Only allow the customer who booked to cancel
+                if (!appointment.getCustomer().getId().equals(customer.getId())) {
+                        throw new UnauthorizedException("You are not authorized to cancel this appointment");
+                }
+                appointment.setStatus(Appointment.AppointmentStatus.CANCELLED);
+                appointment.setCancellationReason("PAYMENTFAILED");
+                appointment.setCancelledAt(java.time.LocalDateTime.now());
+                appointment = appointmentRepository.save(appointment);
+                // Optionally: add logic to free up the timeslot if needed
+                return mapToAppointmentResponse(appointment);
+        }
+
+        // Generate unique appointment number using id and date
+        private String generateAppointmentNumber(Long id, LocalDateTime appointmentDate) {
+                String datePrefix = appointmentDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+                return String.format("APT-%s-%04d", datePrefix, id);
+        }
 }

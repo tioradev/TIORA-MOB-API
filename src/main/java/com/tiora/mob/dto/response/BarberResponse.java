@@ -19,7 +19,7 @@ public class BarberResponse {
     private String email;
     private String phoneNumber;
     private List<java.util.Map<String, Object>> specializations;
-    private Integer ratings;
+    private Double ratings;
     private String profileImageUrl;
 
 

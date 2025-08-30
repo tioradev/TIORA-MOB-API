@@ -1,4 +1,5 @@
 package com.tiora.mob.service;
+import com.tiora.mob.repository.SalonRepository;
 import com.tiora.mob.entity.Employee.EmployeeStatus;
 
 import com.tiora.mob.dto.response.BarberResponse;
@@ -26,6 +27,8 @@ import org.slf4j.LoggerFactory;
 
 @Service
 public class EmployeeService {
+    @Autowired
+    private SalonRepository salonRepository;
 public List<BarberResponse> getBarbersByServiceIdGenderAndBranch(Long serviceId, String gender, Long branchId) {
     String serviceJson = "[{\"id\":" + serviceId + "}]";  // JSON array of objects
     List<Employee> barbers = employeeRepository.findAvailableBarbersByServiceAndGenderAndBranch(serviceJson, gender, branchId);
@@ -64,7 +67,6 @@ public List<BarberResponse> getBarbersByServiceIdGenderAndBranch(Long serviceId,
         }
         // Fallback: return a default specialization object
         java.util.Map<String, Object> defaultSpec = new java.util.HashMap<>();
-        defaultSpec.put("id", -1);
         defaultSpec.put("name", "General Services");
         return java.util.Arrays.asList(defaultSpec);
     }
@@ -72,10 +74,15 @@ public List<BarberResponse> getBarbersByServiceIdGenderAndBranch(Long serviceId,
 
     public List<BarberResponse> getBarbersBySalon(Long salonId) {
         logger.info("getBarbersBySalon called with salonId: {}", salonId);
-        List<Employee> employees = employeeRepository.findBySalonSalonIdAndStatus(salonId, EmployeeStatus.ACTIVE);
+        Salon salon = salonRepository.findById(salonId)
+            .orElseThrow(() -> new ResourceNotFoundException("Salon not found with id: " + salonId));
+        List<Employee> employees = employeeRepository.findBySalonAndStatus(salon, EmployeeStatus.ACTIVE)
+            .stream()
+            .filter(e -> e.getRole() == Employee.Role.BARBER)
+            .collect(Collectors.toList());
         List<BarberResponse> responses = employees.stream()
-                .map(this::mapToBarberResponse)
-                .collect(Collectors.toList());
+            .map(this::mapToBarberResponse)
+            .collect(Collectors.toList());
         logger.info("getBarbersBySalon response count: {}", responses.size());
         return responses;
     }
@@ -83,16 +90,16 @@ public List<BarberResponse> getBarbersByServiceIdGenderAndBranch(Long serviceId,
 
 
     private BarberResponse mapToBarberResponse(Employee employee) {
-        return BarberResponse.builder()
-                .barberId(employee.getEmployeeId())
-                .firstName(employee.getFirstName())
-                .lastName(employee.getLastName())
-                .email(employee.getEmail())
-                .phoneNumber(employee.getPhoneNumber())
-                .specializations(employee.getSpecializations())
-                .ratings(employee.getRatings())
-                .profileImageUrl(employee.getProfileImageUrl())
-                .build();
+    return BarberResponse.builder()
+        .barberId(employee.getEmployeeId())
+        .firstName(employee.getFirstName())
+        .lastName(employee.getLastName())
+        .email(employee.getEmail())
+        .phoneNumber(employee.getPhoneNumber())
+    .specializations(employee.getSpecializations())
+        .ratings(employee.getRatings())
+        .profileImageUrl(employee.getProfileImageUrl())
+        .build();
     }
     // Duplicate getBarbersByServiceId(Long serviceId) removed
 }

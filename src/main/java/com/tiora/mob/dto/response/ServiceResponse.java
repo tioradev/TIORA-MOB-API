@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
+@lombok.Builder
 public class ServiceResponse {
     private Long id;
     private String name;

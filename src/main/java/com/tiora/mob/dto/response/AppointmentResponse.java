@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Schema(description = "Request DTO for creating/updating appointments")
 public class AppointmentResponse {
 
-    @Schema(description = "Appointment ID", example = "1")
+    @Schema(description = "Appointment ID", example = "123")
     private Long id;
 
     @Schema(description = "Unique appointment number", example = "APT-2024-001")

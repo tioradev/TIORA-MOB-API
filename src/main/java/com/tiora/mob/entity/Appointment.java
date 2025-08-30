@@ -1,6 +1,5 @@
 package com.tiora.mob.entity;
 
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,17 +18,32 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "appointments")
 public class Appointment {
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    // id handled by Lombok @Data
+    // ...existing code...
+
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+        if (this.paymentStatus == null) {
+            this.paymentStatus = PaymentStatus.PENDING;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+    // id handled by Lombok @Data
     public String getAppointmentNumber() { return appointmentNumber; }
     public void setAppointmentNumber(String appointmentNumber) { this.appointmentNumber = appointmentNumber; }
     public Customer getCustomer() { return customer; }
     public void setCustomer(Customer customer) { this.customer = customer; }
     public void setService(Service service) { this.service = service; }
     public void setEmployee(Employee employee) { this.employee = employee; }
-    public Salon getSalon() { return salon; }
-    public void setSalon(Salon salon) { this.salon = salon; }
-    public Long getBranchId() { return branchId; }
+
+    // Removed duplicate appointmentNumber field; only the annotated one remains below
     public void setBranchId(Long branchId) { this.branchId = branchId; }
     public LocalDateTime getAppointmentDate() { return appointmentDate; }
     public void setAppointmentDate(LocalDateTime appointmentDate) { this.appointmentDate = appointmentDate; }
@@ -128,9 +142,9 @@ public class Appointment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AppointmentStatus status = AppointmentStatus.SCHEDULED;
-
+    // Appointment number generation is handled in the service layer for best practice
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_status")
+    @Column(nullable = false)
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
     @Column(name = "service_price", nullable = false, precision = 10, scale = 2)
@@ -254,7 +268,7 @@ public class Appointment {
     }
 
     public enum PaymentMethod {
-        CASH, CARD, UPI, NET_BANKING, DIGITAL_WALLET, OTHER
+        CASH, CARD, ADVANCE, FULL
     }
 
 

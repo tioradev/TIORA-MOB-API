@@ -36,7 +36,7 @@ public class SalonService {
     // Get salon by ID
     @Transactional(readOnly = true)
     public Salon getSalonById(Long salonId) {
-        return salonRepository.findBySalonId(salonId)
+        return salonRepository.findById(salonId)
                 .orElseThrow(() -> new RuntimeException("Salon not found with id: " + salonId));
     }
 
@@ -54,17 +54,6 @@ public class SalonService {
         return salonRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
     }
 
-    // Search salons
-    @Transactional(readOnly = true)
-    public List<Salon> searchSalons(String searchTerm) {
-        return salonRepository.searchSalons(searchTerm);
-    }
-
-    // Get salons by district (updated from city)
-    @Transactional(readOnly = true)
-    public List<Salon> getSalonsByDistrict(String district) {
-        return salonRepository.findByDistrictIgnoreCase(district);
-    }
 
 
 

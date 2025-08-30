@@ -1,3 +1,4 @@
+
 package com.tiora.mob.repository;
 
 import com.tiora.mob.entity.Employee;
@@ -21,6 +22,8 @@ import com.tiora.mob.entity.Employee.EmployeeStatus;
 
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
+        // Find by employee ID and salon ID
+        Optional<Employee> findByEmployeeIdAndSalonId(Long employeeId, Long salonId);
 
         // Find available barbers by serviceId in specialization_services (JSON) and servesGender
                         @Query(value = "SELECT * FROM employees WHERE status = 'ACTIVE' AND role = 'BARBER' AND serves_gender = :gender AND branch_id = :branchId AND specializations @> CAST(:serviceJson AS jsonb)", nativeQuery = true)
@@ -40,12 +43,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     // Find by email
     Optional<Employee> findByEmail(String email);
 
-    // Find by username
-    Optional<Employee> findByUsername(String username);
 
-    // Find by username with salon and branch eagerly fetched
-    @Query("SELECT e FROM Employee e LEFT JOIN FETCH e.salon LEFT JOIN FETCH e.branch WHERE e.username = :username")
-    Optional<Employee> findByUsernameWithDetails(@Param("username") String username);
 
     // Find by phone number
     Optional<Employee> findByPhoneNumber(String phoneNumber);
@@ -74,55 +72,18 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     // Count employees by salon and role
     long countBySalonAndRole(Salon salon, Role role);
 
-    // Find employees by salary range
-    @Query("SELECT e FROM Employee e WHERE e.salon = :salon AND " +
-            "e.baseSalary BETWEEN :minSalary AND :maxSalary")
-    List<Employee> findBySalaryRange(@Param("salon") Salon salon,
-                                     @Param("minSalary") BigDecimal minSalary,
-                                     @Param("maxSalary") BigDecimal maxSalary);
 
-    // Find employees hired in date range
-    @Query("SELECT e FROM Employee e WHERE e.salon = :salon AND " +
-            "e.hireDate BETWEEN :startDate AND :endDate ORDER BY e.hireDate DESC")
-    List<Employee> findByHireDateRange(@Param("salon") Salon salon,
-                                       @Param("startDate") java.time.LocalDate startDate,
-                                       @Param("startDate") java.time.LocalDate endDate);
-
-    // Find employees with upcoming birthdays
-    @Query("SELECT e FROM Employee e WHERE e.salon = :salon AND " +
-            "MONTH(e.dateOfBirth) = :month AND DAY(e.dateOfBirth) >= :day " +
-            "ORDER BY DAY(e.dateOfBirth)")
-    List<Employee> findUpcomingBirthdays(@Param("salon") Salon salon,
-                                         @Param("month") int month,
-                                         @Param("day") int day);
 
     // Find stylists available for appointments
     @Query("SELECT e FROM Employee e WHERE e.salon = :salon AND " +
             "e.status = 'ACTIVE' AND e.role IN ('STYLIST', 'BARBER', 'MANAGER')")
     List<Employee> findAvailableStylists(@Param("salon") Salon salon);
 
-    // Check if email exists (excluding current employee)
-    @Query("SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END " +
-            "FROM Employee e WHERE LOWER(e.email) = LOWER(:email) AND e.employeeId != :excludeEmployeeId")
-    boolean existsByEmailIgnoreCaseAndEmployeeIdNot(@Param("email") String email, @Param("excludeEmployeeId") Long excludeEmployeeId);
-
-    // Check if phone exists (excluding current employee)
-    @Query("SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END " +
-            "FROM Employee e WHERE e.phoneNumber = :phoneNumber AND e.employeeId != :excludeEmployeeId")
-    boolean existsByPhoneNumberAndEmployeeIdNot(@Param("phoneNumber") String phoneNumber, @Param("excludeEmployeeId") Long excludeEmployeeId);
 
     // Find employees by multiple roles
     List<Employee> findBySalonAndRoleIn(Salon salon, List<Role> roles);
 
-    // Find top performing employees by appointments
-    @Query("SELECT e FROM Employee e LEFT JOIN e.appointments a " +
-            "WHERE e.salon = :salon AND a.createdAt >= :since " +
-            "GROUP BY e ORDER BY COUNT(a) DESC")
-    List<Employee> findTopPerformingEmployees(@Param("salon") Salon salon,
-                                              @Param("since") LocalDateTime since,
-                                              Pageable pageable);
 
     // Find employees by salon ID and status
-    List<Employee> findBySalonSalonIdAndStatus(Long salonId, EmployeeStatus status);
 
 }

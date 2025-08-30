@@ -81,13 +81,6 @@ public class SalonController {
             return ResponseEntity.notFound().build();
         }
     }
-    @GetMapping("/search")
-    public ResponseEntity<List<SalonResponse>> searchSalons(
-            @Parameter(description = "Search query", example = "Glamour") @RequestParam String query) {
-        List<Salon> salons = salonService.searchSalons(query);
-        List<SalonResponse> response = salons.stream().map(this::toSalonResponse).collect(Collectors.toList());
-        return ResponseEntity.ok(response);
-    }
 
     private SalonResponse toSalonResponse(Salon salon) {
         SalonResponse dto = new SalonResponse();
