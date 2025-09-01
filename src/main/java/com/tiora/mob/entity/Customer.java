@@ -29,8 +29,6 @@ public class Customer {
     public void setLastName(String lastName) { this.lastName = lastName; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
-    public java.time.LocalDate getDateOfBirth() { return dateOfBirth; }
-    public void setDateOfBirth(java.time.LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
     public Gender getGender() { return gender; }
     public void setGender(Gender gender) { this.gender = gender; }
     public CustomerStatus getStatus() { return status; }
@@ -78,9 +76,6 @@ public class Customer {
     @Column(unique = true, nullable = false, length = 100)
     private String email;
 
-
-    @Column(name = "date_of_birth")
-    private java.time.LocalDate dateOfBirth;
 
     @Enumerated(EnumType.STRING)
     private Gender gender;

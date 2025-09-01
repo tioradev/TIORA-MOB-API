@@ -41,9 +41,9 @@ public class OtpService {
     public OtpResponse generateAndSendOtp(String phoneNumber) {
         // No customer existence check here. OTP is sent regardless of customer existence.
 
-        // For testing: always use OTP '1234' for 0771231234
+        // For testing: always use OTP '1234' for 0768391956
         String otp;
-        if ("0771231234".equals(phoneNumber)) {
+        if ("0768391956".equals(phoneNumber)) {
             otp = "1234"; // <-- Remove this block for production
         } else {
             otp = generateOtp();

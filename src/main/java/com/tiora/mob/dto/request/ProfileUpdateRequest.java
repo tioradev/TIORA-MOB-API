@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public class ProfileUpdateRequest {
+    // Profile image URL from Firebase Storage
+    private String profileImageUrl;
 
     @NotBlank(message = "Phone number is required")
     @Size(max = 15, message = "Phone number cannot exceed 15 characters")
@@ -64,5 +66,13 @@ public class ProfileUpdateRequest {
 
     public void setGender(String gender) {
         this.gender = gender;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 }

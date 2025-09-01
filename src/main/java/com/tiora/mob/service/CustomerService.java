@@ -1,8 +1,188 @@
+// package com.tiora.mob.service;
+
+// import com.tiora.mob.dto.request.ProfileUpdateRequest;
+// import com.tiora.mob.dto.request.CustomerCreateRequest;
+// import com.tiora.mob.dto.response.CustomerProfileResponse;
+// import com.tiora.mob.entity.Appointment;
+// import com.tiora.mob.entity.Customer;
+// import com.tiora.mob.exception.ResourceNotFoundException;
+// import com.tiora.mob.exception.UnauthorizedException;
+// import com.tiora.mob.repository.AppointmentRepository;
+// import com.tiora.mob.repository.CustomerRepository;
+// import org.springframework.beans.factory.annotation.Autowired;
+// import org.springframework.stereotype.Service;
+// import org.springframework.transaction.annotation.Transactional;
+// import org.springframework.util.StringUtils;
+// import java.time.LocalDateTime;
+// import java.util.Comparator;
+// import java.util.List;
+// import java.util.Optional;
+// import org.slf4j.Logger;
+// import org.slf4j.LoggerFactory;
+
+// @Service
+// public class CustomerService {
+//     private static final Logger logger = LoggerFactory.getLogger(CustomerService.class);
+
+//     @Autowired
+//     private CustomerRepository customerRepository;
+
+//     @Autowired
+//     private AppointmentRepository appointmentRepository;
+
+//     @Autowired
+//     private AuthService authService;
+
+//     /**
+//      * Create a new customer for signup flow.
+//      */
+//     @Transactional
+//     public Long createCustomer(CustomerCreateRequest request) {
+//         logger.info("createCustomer called with request: {}", request);
+//         if (customerRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+//             throw new RuntimeException("Phone number already registered");
+//         }
+//         if (customerRepository.existsByEmail(request.getEmail())) {
+//             throw new RuntimeException("Email already registered");
+//         }
+//         Customer customer = new Customer();
+//         customer.setFirstName(request.getFirstName());
+//         customer.setLastName(request.getLastName());
+//         customer.setEmail(request.getEmail());
+//         customer.setPhoneNumber(request.getPhoneNumber());
+//         try {
+//             customer.setGender(Customer.Gender.valueOf(request.getGender().toUpperCase()));
+//         } catch (Exception e) {
+//             customer.setGender(null);
+//         }
+//         customer.setCreatedAt(LocalDateTime.now());
+//         customer.setUpdatedAt(LocalDateTime.now());
+//         customerRepository.save(customer);
+//         return customer.getId();
+//     }
+
+//     /**
+//      * Get customer profile details
+//      */
+//     public CustomerProfileResponse getCustomerProfile(String token) {
+//         logger.info("getCustomerProfile called with token: {}", token);
+//         Long customerId = authService.getCustomerIdFromToken(token);
+//         Customer customer = customerRepository.findById(customerId)
+//                 .orElseThrow(() -> new UnauthorizedException("Customer not found"));
+
+//         CustomerProfileResponse response = new CustomerProfileResponse();
+//         response.setId(customer.getId());
+//         response.setFirstName(customer.getFirstName());
+//         response.setLastName(customer.getLastName());
+//         response.setEmail(customer.getEmail());
+//         response.setPhoneNumber(customer.getPhoneNumber());
+//         response.setGender(customer.getGender() != null ? customer.getGender().toString() : null);
+//         response.setMemberSince(customer.getCreatedAt());
+
+//         // Check if profile is complete
+//         boolean isComplete = StringUtils.hasText(customer.getFirstName()) &&
+//                 StringUtils.hasText(customer.getLastName()) &&
+//                 StringUtils.hasText(customer.getEmail());
+//         response.setProfileComplete(isComplete);
+
+//         // Get appointment stats
+//         List<Appointment> appointments = appointmentRepository.findByCustomerIdOrderByAppointmentDateDesc(customerId);
+//         response.setCompletedAppointments(
+//                 (int) appointments.stream()
+//                         .filter(a -> a.getStatus() == Appointment.AppointmentStatus.COMPLETED)
+//                         .count()
+//         );
+
+//         logger.info("getCustomerProfile response: {}", response);
+//         return response;
+//     }
+
+//     @Transactional
+//     public void updateCustomerProfile(String token, ProfileUpdateRequest request) {
+//         logger.info("updateCustomerProfile called with token: {}, request: {}", token, request);
+//         Long customerId = authService.getCustomerIdFromToken(token);
+//         Customer customer = null;
+//         if (customerId != null) {
+//             customer = customerRepository.findById(customerId).orElse(null);
+//         }
+//         if (customer == null) {
+//             // New user: create new customer
+//             customer = new Customer();
+//             customer.setPhoneNumber(request.getPhoneNumber());
+//             customer.setCreatedAt(LocalDateTime.now());
+//         } else {
+//             // Existing user: update phone if changed
+//             if (request.getPhoneNumber() != null && !request.getPhoneNumber().equals(customer.getPhoneNumber())) {
+//                 customer.setPhoneNumber(request.getPhoneNumber());
+//             }
+//         }
+//         customer.setFirstName(request.getFirstName());
+//         customer.setLastName(request.getLastName());
+//         customer.setEmail(request.getEmail());
+//         if (request.getGender() != null) {
+//             try {
+//                 customer.setGender(Customer.Gender.valueOf(request.getGender().toUpperCase()));
+//             } catch (IllegalArgumentException e) {
+//                 logger.warn("Invalid gender value: {}. Setting to null.", request.getGender());
+//                 customer.setGender(null);
+//             }
+//         } else {
+//             customer.setGender(null);
+//         }
+//         customer.setUpdatedAt(LocalDateTime.now());
+//         customerRepository.save(customer);
+//         logger.info("Customer profile created/updated for phone: {}", customer.getPhoneNumber());
+//     }
+
+//     public Customer getCustomerById(Long id) {
+//         return customerRepository.findById(id)
+//                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+//     }
+
+//     public Customer getCustomerFromToken(String token) {
+//         Long customerId = authService.getCustomerIdFromToken(token);
+//         return getCustomerById(customerId);
+//     }
+
+//     public Customer getCustomerByPhoneNumber(String phoneNumber){
+//         return customerRepository.findByPhoneNumber(phoneNumber).orElse(null);
+//     }
+// }
+//             try {
+//                 customer.setGender(Customer.Gender.valueOf(request.getGender().toUpperCase()));
+//             } catch (IllegalArgumentException e) {
+//                 logger.warn("Invalid gender value: {}. Setting to null.", request.getGender());
+//                 customer.setGender(null);
+//             }
+//         } else {
+//             customer.setGender(null);
+//         }
+//         customer.setUpdatedAt(LocalDateTime.now());
+//         customerRepository.save(customer);
+//         logger.info("Customer profile created/updated for phone: {}", customer.getPhoneNumber());
+//     }
+
+//     public Customer getCustomerById(Long id) {
+//         return customerRepository.findById(id)
+//                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+//     }
+
+//     public Customer getCustomerFromToken(String token) {
+//         Long customerId = authService.getCustomerIdFromToken(token);
+//         return getCustomerById(customerId);
+//     }
+
+//     public Customer getCustomerByPhoneNumber(String phoneNumber){
+//         Customer customer = customerRepository.findByPhoneNumber(phoneNumber).get();
+//         return customer;
+//     }
+// }
+
+
 package com.tiora.mob.service;
 
-
-
 import com.tiora.mob.dto.request.ProfileUpdateRequest;
+import com.tiora.mob.dto.request.CustomerCreateRequest;
 import com.tiora.mob.dto.response.CustomerProfileResponse;
 import com.tiora.mob.entity.Appointment;
 import com.tiora.mob.entity.Customer;
@@ -14,12 +194,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +211,34 @@ public class CustomerService {
 
     @Autowired
     private AuthService authService;
+
+    /**
+     * Create a new customer for signup flow.
+     */
+    @Transactional
+    public Long createCustomer(CustomerCreateRequest request) {
+        logger.info("createCustomer called with request: {}", request);
+        if (customerRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new RuntimeException("Phone number already registered");
+        }
+        if (customerRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email already registered");
+        }
+        Customer customer = new Customer();
+        customer.setFirstName(request.getFirstName());
+        customer.setLastName(request.getLastName());
+        customer.setEmail(request.getEmail());
+        customer.setPhoneNumber(request.getPhoneNumber());
+        try {
+            customer.setGender(Customer.Gender.valueOf(request.getGender().toUpperCase()));
+        } catch (Exception e) {
+            customer.setGender(null);
+        }
+        customer.setCreatedAt(LocalDateTime.now());
+        customer.setUpdatedAt(LocalDateTime.now());
+        customerRepository.save(customer);
+        return customer.getId();
+    }
 
     /**
      * Get customer profile details
@@ -68,12 +272,6 @@ public class CustomerService {
                         .count()
         );
 
-        // Get last visit date
-//        appointments.stream()
-//                .filter(a -> a.getStatus() == Appointment.AppointmentStatus.COMPLETED)
-//                .max(Comparator.comparing(Appointment::getAppointmentDate))
-//                .ifPresent(a -> response.setLastVisit(a.getAppointmentDate()));
-
         logger.info("getCustomerProfile response: {}", response);
         return response;
     }
@@ -86,23 +284,33 @@ public class CustomerService {
         if (customerId != null) {
             customer = customerRepository.findById(customerId).orElse(null);
         }
+        // If not found by ID, try by phone number
+        if (customer == null && request.getPhoneNumber() != null) {
+            customer = customerRepository.findByPhoneNumber(request.getPhoneNumber()).orElse(null);
+        }
         if (customer == null) {
             // New user: create new customer
             customer = new Customer();
-            // id will be auto-generated
             customer.setPhoneNumber(request.getPhoneNumber());
             customer.setCreatedAt(LocalDateTime.now());
         } else {
             // Existing user: update phone if changed
             if (request.getPhoneNumber() != null && !request.getPhoneNumber().equals(customer.getPhoneNumber())) {
+                // Check if new phone number is already taken by another customer
+                Customer existing = customerRepository.findByPhoneNumber(request.getPhoneNumber()).orElse(null);
+                if (existing != null && !existing.getId().equals(customer.getId())) {
+                    throw new IllegalArgumentException("Phone number already in use by another customer");
+                }
                 customer.setPhoneNumber(request.getPhoneNumber());
             }
         }
         customer.setFirstName(request.getFirstName());
         customer.setLastName(request.getLastName());
         customer.setEmail(request.getEmail());
-        // Do not store address, city, or pincode as per new requirement
-        // Convert gender String to enum if present
+        // Update profile image URL if provided
+        if (request.getProfileImageUrl() != null) {
+            customer.setProfileImageUrl(request.getProfileImageUrl());
+        }
         if (request.getGender() != null) {
             try {
                 customer.setGender(Customer.Gender.valueOf(request.getGender().toUpperCase()));
@@ -128,8 +336,8 @@ public class CustomerService {
         return getCustomerById(customerId);
     }
 
-    public Customer getCustomerByPhoneNumber(String phoneNumber){
-        Customer customer = customerRepository.findByPhoneNumber(phoneNumber).get();
-        return customer;
+    public Customer getCustomerByPhoneNumber(String phoneNumber) {
+        return customerRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found with phone number: " + phoneNumber));
     }
 }

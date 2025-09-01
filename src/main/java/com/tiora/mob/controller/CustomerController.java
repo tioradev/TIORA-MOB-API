@@ -1,3 +1,4 @@
+
 package com.tiora.mob.controller;
 
 
@@ -5,12 +6,16 @@ package com.tiora.mob.controller;
 import com.tiora.mob.dto.request.ProfileUpdateRequest;
 import com.tiora.mob.dto.response.CustomerProfileResponse;
 import com.tiora.mob.service.CustomerService;
+
+import com.tiora.mob.dto.request.CustomerCreateRequest;
+import com.tiora.mob.dto.request.ProfileUpdateRequest;
+import com.tiora.mob.dto.response.CustomerProfileResponse;
+import com.tiora.mob.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +27,14 @@ public class CustomerController {
 
     @Autowired
     private CustomerService customerService;
+
+    @PostMapping("/signup")
+    public ResponseEntity<Map<String, Object>> createCustomer(@Validated @RequestBody CustomerCreateRequest request) {
+        logger.info("createCustomer called with request: {}", request);
+        Long customerId = customerService.createCustomer(request);
+        logger.info("Customer created with id: {}", customerId);
+        return ResponseEntity.ok(Map.of("id", customerId, "message", "Customer created successfully"));
+    }
 
     @GetMapping("/profile")
     public ResponseEntity<CustomerProfileResponse> getCustomerProfile(
@@ -41,4 +54,6 @@ public class CustomerController {
         logger.info("Profile updated successfully");
         return ResponseEntity.ok(Map.of("message", "Profile updated successfully"));
     }
+
+    // ...other endpoints...
 }
