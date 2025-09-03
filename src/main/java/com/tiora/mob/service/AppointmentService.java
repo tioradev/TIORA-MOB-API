@@ -13,11 +13,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @org.springframework.stereotype.Service
@@ -43,6 +47,9 @@ public class AppointmentService {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private MobileAppointmentStreamPublisher streamPublisher;
 
     @Transactional
     public AppointmentResponse createAppointment(String token, AppointmentRequest appointmentRequest) {
@@ -122,6 +129,10 @@ public class AppointmentService {
         String appointmentNumber = generateAppointmentNumber(appointment.getId(), appointment.getAppointmentDate());
         appointment.setAppointmentNumber(appointmentNumber);
         appointment = appointmentRepository.save(appointment);
+        
+        // Publish appointment created event to Redis Stream
+        publishAppointmentCreatedEvent(appointment, services, appointmentRequest);
+        
         logger.info("Appointment created successfully for customer={}, appointmentNumber={}", customer.getPhoneNumber(), appointment.getAppointmentNumber());
         return mapToAppointmentResponse(appointment);
     }
@@ -200,13 +211,57 @@ public class AppointmentService {
                 if (!appointment.getCustomer().getId().equals(customer.getId())) {
                         throw new UnauthorizedException("You are not authorized to cancel this appointment");
                 }
+                
+                String oldStatus = appointment.getStatus().toString();
                 appointment.setStatus(Appointment.AppointmentStatus.CANCELLED);
                 appointment.setCancellationReason("PAYMENTFAILED");
                 appointment.setCancelledAt(java.time.LocalDateTime.now());
                 appointment = appointmentRepository.save(appointment);
+                
+                // Publish appointment cancelled event to Redis Stream
+                streamPublisher.publishAppointmentCancelled(
+                    appointment.getSalon().getId(),
+                    appointment.getId(),
+                    "PAYMENTFAILED"
+                );
+                
                 // Optionally: add logic to free up the timeslot if needed
                 return mapToAppointmentResponse(appointment);
         }
+
+    /**
+     * Publishes appointment created event to Redis Stream for web backend notification
+     */
+    private void publishAppointmentCreatedEvent(Appointment appointment, List<Service> services, AppointmentRequest request) {
+        try {
+            Map<String, Object> appointmentData = new HashMap<>();
+            appointmentData.put("appointment_number", appointment.getAppointmentNumber());
+            appointmentData.put("appointment_date", appointment.getAppointmentDate().toString());
+            appointmentData.put("estimated_end_time", appointment.getEstimatedEndTime().toString());
+            appointmentData.put("service_names", services.stream().map(Service::getName).collect(Collectors.toList()));
+            appointmentData.put("service_price", appointment.getServicePrice().toString());
+            appointmentData.put("total_amount", appointment.getTotalAmount().toString());
+            appointmentData.put("payment_method", appointment.getPaymentMethod() != null ? appointment.getPaymentMethod().toString() : "");
+            appointmentData.put("status", appointment.getStatus().toString());
+            appointmentData.put("payment_status", appointment.getPaymentStatus().toString());
+            appointmentData.put("booking_platform", "mobile_app");
+            appointmentData.put("customer_name", appointment.getCustomer().getFirstName() + " " + appointment.getCustomer().getLastName());
+            appointmentData.put("customer_phone", appointment.getCustomer().getPhoneNumber());
+            appointmentData.put("employee_name", appointment.getEmployee().getFirstName() + " " + appointment.getEmployee().getLastName());
+
+            streamPublisher.publishAppointmentCreated(
+                appointment.getSalon().getId(),
+                appointment.getBranchId(),
+                appointment.getId(),
+                appointment.getCustomer().getId(),
+                appointment.getEmployee().getEmployeeId(),
+                appointmentData
+            );
+        } catch (Exception e) {
+            logger.error("Failed to publish appointment created event for appointment {}: {}", 
+                        appointment.getId(), e.getMessage(), e);
+        }
+    }
 
         // Generate unique appointment number using id and date
         private String generateAppointmentNumber(Long id, LocalDateTime appointmentDate) {
