@@ -25,11 +25,30 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<Map<String, String>> handleUnauthorizedException(UnauthorizedException ex) {
+        logger.error("UnauthorizedException: {}", ex.getMessage());
+        Map<String, String> response = new HashMap<>();
+        response.put("error", "Authentication failed");
+        response.put("message", ex.getMessage());
+        response.put("hint", "Please check your JWT token or login again");
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
+
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleIllegalStateException(IllegalStateException ex) {
         logger.error("IllegalStateException: {}", ex.getMessage(), ex);
         Map<String, String> response = new HashMap<>();
         response.put("error", ex.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        logger.error("IllegalArgumentException: {}", ex.getMessage(), ex);
+        Map<String, String> response = new HashMap<>();
+        response.put("error", ex.getMessage());
+        response.put("hint", "Please check the API documentation for valid parameter values");
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 

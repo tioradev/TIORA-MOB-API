@@ -7,10 +7,16 @@ import io.jsonwebtoken.security.Keys;
 import com.tiora.mob.config.JwtConfig;
 import com.tiora.mob.dto.response.JwtResponse;
 import com.tiora.mob.dto.response.JwtWithCustomerResponse;
+import com.tiora.mob.dto.response.JwtWithBarberResponse;
 import com.tiora.mob.dto.response.CustomerProfileResponse;
+import com.tiora.mob.dto.response.BarberAuthResponse;
 import com.tiora.mob.entity.Customer;
+import com.tiora.mob.entity.Employee;
+import com.tiora.mob.entity.MobUser;
 import com.tiora.mob.exception.UnauthorizedException;
 import com.tiora.mob.repository.CustomerRepository;
+import com.tiora.mob.repository.EmployeeRepository;
+import com.tiora.mob.repository.MobUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -54,6 +60,12 @@ public class AuthService {
 
     @Autowired
     private CustomerRepository customerRepository;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+    
+    @Autowired
+    private MobUserRepository mobUserRepository;
 
     @Autowired
     private CacheManager cacheManager;
@@ -142,8 +154,12 @@ public class AuthService {
      * Extract customer ID from token
      */
     public Long getCustomerIdFromToken(String tokenHeader) {
-        String token = extractTokenFromHeader(tokenHeader);
-        if (token != null) {
+        try {
+            String token = extractTokenFromHeader(tokenHeader);
+            if (token == null) {
+                throw new UnauthorizedException("Token not found in header");
+            }
+            
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(jwtConfig.getSecretKey())
                     .build()
@@ -156,9 +172,21 @@ public class AuthService {
                 throw new UnauthorizedException("Token has been invalidated");
             }
 
-            return claims.get(CUSTOMER_ID_CLAIM, Long.class);
+            Long customerId = claims.get(CUSTOMER_ID_CLAIM, Long.class);
+            if (customerId == null) {
+                throw new UnauthorizedException("Customer ID not found in token claims");
+            }
+            
+            return customerId;
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            throw new UnauthorizedException("Token has expired");
+        } catch (io.jsonwebtoken.MalformedJwtException e) {
+            throw new UnauthorizedException("Malformed token");
+        } catch (io.jsonwebtoken.SignatureException e) {
+            throw new UnauthorizedException("Invalid token signature");
+        } catch (Exception e) {
+            throw new UnauthorizedException("Invalid token: " + e.getMessage());
         }
-        throw new UnauthorizedException("Invalid token");
     }
 
     /**
@@ -192,6 +220,122 @@ public class AuthService {
     /**
      * Extract token from Authorization header
      */
+    /**
+     * Verify OTP and generate token with role-based logic
+     */
+    public JwtResponse verifyOtpAndGenerateTokenWithRole(String phoneNumber, String otp, String userRole) {
+        logger.info("Verifying OTP for phone: {} with role: {}", phoneNumber, userRole);
+        
+        // Verify OTP
+        otpService.verifyOtp(phoneNumber, otp);
+        
+        if ("CUSTOMER".equals(userRole)) {
+            return handleCustomerAuth(phoneNumber);
+        } else if ("SALON_BARBER".equals(userRole)) {
+            return handleBarberAuth(phoneNumber);
+        } else {
+            throw new UnauthorizedException("Invalid user role");
+        }
+    }
+    
+    /**
+     * Handle customer authentication (existing logic)
+     */
+    private JwtResponse handleCustomerAuth(String phoneNumber) {
+        // Check if customer exists
+        Optional<Customer> customerOpt = customerRepository.findByPhoneNumber(phoneNumber);
+        boolean customerExists = customerOpt.isPresent();
+
+        String token;
+        boolean isProfileComplete = false;
+        if (customerExists) {
+            Customer customer = customerOpt.get();
+            token = generateToken(customer);
+            isProfileComplete = isProfileComplete(customer);
+            // Map Customer to CustomerProfileResponse
+            CustomerProfileResponse profile = new CustomerProfileResponse();
+            profile.setId(customer.getId());
+            profile.setFirstName(customer.getFirstName());
+            profile.setLastName(customer.getLastName());
+            profile.setEmail(customer.getEmail());
+            profile.setPhoneNumber(customer.getPhoneNumber());
+            profile.setGender(customer.getGender() != null ? customer.getGender().name() : null);
+            profile.setMemberSince(customer.getCreatedAt());
+            profile.setLastVisit(customer.getLastVisitDate());
+            profile.setProfileComplete(isProfileComplete);
+            profile.setProfileImageUrl(customer.getProfileImageUrl());
+            return new JwtWithCustomerResponse(token, isProfileComplete, true, profile);
+        } else {
+            // Generate a token with phone number only (for signup flow)
+            token = generateTokenForPhone(phoneNumber);
+            return new JwtResponse(token, false, false);
+        }
+    }
+    
+    /**
+     * Handle barber authentication - get barber details from employee table
+     */
+    private JwtResponse handleBarberAuth(String phoneNumber) {
+        // Get barber details from employee table with eager loading of salon and branch
+        Optional<Employee> employeeOpt = employeeRepository.findByPhoneNumberWithSalonAndBranch(phoneNumber);
+        if (employeeOpt.isEmpty()) {
+            throw new UnauthorizedException("Employee details not found for this phone number");
+        }
+        
+        Employee employee = employeeOpt.get();
+        
+        // Check if employee is active
+        if (!"ACTIVE".equals(employee.getStatus().toString())) {
+            throw new UnauthorizedException("Employee account is not active");
+        }
+        
+        // Generate token for barber (using employee ID in claims)
+        String token = generateTokenForBarber(employee);
+        
+        // Create barber response with all employee details
+        BarberAuthResponse barberDetails = BarberAuthResponse.builder()
+            .employeeId(employee.getEmployeeId())
+            .firstName(employee.getFirstName())
+            .lastName(employee.getLastName())
+            .email(employee.getEmail())
+            .phoneNumber(employee.getPhoneNumber())
+            .role(employee.getRole().toString())
+            .status(employee.getStatus().toString())
+            .salonId(employee.getSalon() != null ? employee.getSalon().getSalonId() : null)
+            .branchId(employee.getBranch() != null ? employee.getBranch().getBranchId() : null)
+            .profileImageUrl(employee.getProfileImageUrl())
+            .ratings(employee.getRatings())
+            .specializations(employee.getSpecializations() != null ? employee.getSpecializations().toString() : null)
+            .createdAt(employee.getCreatedAt())
+            .updatedAt(employee.getUpdatedAt())
+            .build();
+        
+        // Return JWT response with barber details
+        return new JwtWithBarberResponse(token, barberDetails);
+    }
+    
+    /**
+     * Generate JWT token for barber with employee ID
+     */
+    private String generateTokenForBarber(Employee employee) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtConfig.getExpiration());
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("employeeId", employee.getEmployeeId());
+        claims.put("salonId", employee.getSalon() != null ? employee.getSalon().getSalonId() : null);
+        claims.put("branchId", employee.getBranch() != null ? employee.getBranch().getBranchId() : null);
+        claims.put("role", "SALON_BARBER");
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(employee.getPhoneNumber())
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(jwtConfig.getSecretKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
     private String extractTokenFromHeader(String header) {
         if (StringUtils.hasText(header) && header.startsWith(jwtConfig.getTokenPrefix())) {
             return header.substring(jwtConfig.getTokenPrefix().length());

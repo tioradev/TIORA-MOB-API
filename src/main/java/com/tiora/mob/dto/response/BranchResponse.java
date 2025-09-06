@@ -13,6 +13,7 @@ public class BranchResponse {
     private BigDecimal latitude;
     private String branchPhoneNumber;
     private String branchEmail;
+    private String description;
     private String branchImage;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -34,6 +35,8 @@ public class BranchResponse {
     public void setBranchPhoneNumber(String branchPhoneNumber) { this.branchPhoneNumber = branchPhoneNumber; }
     public String getBranchEmail() { return branchEmail; }
     public void setBranchEmail(String branchEmail) { this.branchEmail = branchEmail; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
     public String getBranchImage() { return branchImage; }
     public void setBranchImage(String branchImage) { this.branchImage = branchImage; }
     public LocalDateTime getCreatedAt() { return createdAt; }

@@ -3,8 +3,10 @@ package com.tiora.mob.service;
 
 import com.tiora.mob.dto.response.OtpResponse;
 import com.tiora.mob.entity.Customer;
+import com.tiora.mob.entity.MobUser;
 import com.tiora.mob.exception.UnauthorizedException;
 import com.tiora.mob.repository.CustomerRepository;
+import com.tiora.mob.repository.MobUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
@@ -31,15 +33,39 @@ public class OtpService {
 
     @Autowired
     private CustomerRepository customerRepository;
+    
+    @Autowired
+    private MobUserRepository mobUserRepository;
 
     // For generating random OTPs
     private final SecureRandom random = new SecureRandom();
 
     /**
-     * Generate and send OTP to the provided phone number
+     * Generate and send OTP to the provided phone number with role validation
      */
-    public OtpResponse generateAndSendOtp(String phoneNumber) {
-        // No customer existence check here. OTP is sent regardless of customer existence.
+    public OtpResponse generateAndSendOtp(String phoneNumber, String userRole) {
+        logger.info("Generating OTP for phone: {} with role: {}", phoneNumber, userRole);
+        
+        // Validate user role
+        if (!"CUSTOMER".equals(userRole) && !"SALON_BARBER".equals(userRole)) {
+            throw new UnauthorizedException("Invalid user role. Must be CUSTOMER or SALON_BARBER");
+        }
+        
+        // Role-specific validation
+        if ("SALON_BARBER".equals(userRole)) {
+            // Check if the phone number exists in mob_users table
+            boolean barberExists = mobUserRepository.existsByBarberPhone(phoneNumber);
+            if (!barberExists) {
+                throw new UnauthorizedException("Stylist is not registered to the System, Please contact the owner");
+            }
+            
+            // Check if barber is active
+            Optional<MobUser> mobUser = mobUserRepository.findByBarberPhoneAndStatus(
+                phoneNumber, MobUser.UserStatus.ACTIVE);
+            if (mobUser.isEmpty()) {
+                throw new UnauthorizedException("Stylist account is not active, Please contact the owner");
+            }
+        }
 
         // For testing: always use OTP '1234' for 0768391956
         String otp;

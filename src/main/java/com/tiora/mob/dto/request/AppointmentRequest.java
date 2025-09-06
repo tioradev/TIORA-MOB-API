@@ -36,6 +36,7 @@ public class AppointmentRequest {
     private Long branchId;
 
     @Schema(description = "Customer ID. Required. Must be a valid customer in the system. All customer details will be filled from the database.", example = "123", required = true)
+    @NotNull(message = "Customer ID is required")
     private Long customerId;
 
     @Schema(description = "Payment method. Optional. Allowed values: CASH, CARD, ADVANCE, FULL.", example = "CASH")
@@ -44,17 +45,19 @@ public class AppointmentRequest {
     @Schema(description = "Rating for the appointment. Optional. Integer value.", example = "5")
     private Integer rating;
 
-    @Schema(description = "Appointment date and time. Required. Must be a future date/time. Format: yyyy-MM-dd'T'HH:mm:ss.", required = true)
+    @Schema(description = "Appointment date and time. Required. Must be a future date/time. Format: yyyy-MM-dd'T'HH:mm:ss or yyyy-MM-dd'T'HH:mm:ss.SSSZ", 
+            example = "2025-09-08T15:30:00", required = true)
     @NotNull(message = "Appointment date is required")
     @Future(message = "Appointment date must be in the future")
     private LocalDateTime appointmentDate;
 
-    @Schema(description = "Estimated end time. Optional. Format: yyyy-MM-dd'T'HH:mm:ss.")
+    @Schema(description = "Estimated end time. Optional. Format: yyyy-MM-dd'T'HH:mm:ss or yyyy-MM-dd'T'HH:mm:ss.SSSZ", 
+            example = "2025-09-08T16:30:00")
     private LocalDateTime estimatedEndTime;
 
     @Schema(description = "Service price. Required. Must be greater than 0.", example = "50.00", required = true)
     @NotNull(message = "Service price is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Service price must be greater than 0")
+    @DecimalMin(value = "0.01", message = "Service price must be greater than 0")
     private BigDecimal servicePrice;
 
     @Schema(description = "Discount amount. Optional. Must be 0 or greater.", example = "5.00")

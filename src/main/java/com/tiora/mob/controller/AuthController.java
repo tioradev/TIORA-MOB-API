@@ -32,16 +32,28 @@ public class AuthController {
 
     @PostMapping("/send-otp")
     public ResponseEntity<OtpResponse> sendOtp(@RequestBody PhoneRequest request) {
-        logger.info("sendOtp called with phone: {}", request.getPhoneNumber());
-        OtpResponse response = otpService.generateAndSendOtp(request.getPhoneNumber());
+        logger.info("sendOtp called with phone: {} and role: {}", request.getPhoneNumber(), request.getUserRole());
+        OtpResponse response = otpService.generateAndSendOtp(request.getPhoneNumber(), request.getUserRole());
         logger.info("OTP sent response: {}", response);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/verify-otp")
     public ResponseEntity<JwtResponse> verifyOtp(@RequestBody OtpVerificationRequest request) {
-        logger.info("verifyOtp called with phone: {}", request.getPhoneNumber());
-        JwtResponse response = authService.verifyOtpAndGenerateToken(request.getPhoneNumber(), request.getOtp());
+        logger.info("verifyOtp called with phone: {} and role: {}", request.getPhoneNumber(), request.getUserRole());
+        
+        // Use role-based authentication
+        String userRole = request.getUserRole();
+        if (userRole == null || userRole.isEmpty()) {
+            userRole = "CUSTOMER"; // Default to CUSTOMER for backward compatibility
+        }
+        
+        JwtResponse response = authService.verifyOtpAndGenerateTokenWithRole(
+            request.getPhoneNumber(), 
+            request.getOtp(),
+            userRole
+        );
+        
         logger.info("verifyOtp response: {}", response);
         return ResponseEntity.ok(response);
     }

@@ -86,4 +86,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     // Find employees by salon ID and status
 
+    // Find employee by phone number with eager loading of salon and branch
+    @Query("SELECT e FROM Employee e LEFT JOIN FETCH e.salon LEFT JOIN FETCH e.branch WHERE e.phoneNumber = :phoneNumber")
+    Optional<Employee> findByPhoneNumberWithSalonAndBranch(@Param("phoneNumber") String phoneNumber);
+
 }

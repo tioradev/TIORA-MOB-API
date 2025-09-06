@@ -4,6 +4,7 @@ package com.tiora.mob.service;
 
 import com.tiora.mob.dto.request.AppointmentRequest;
 import com.tiora.mob.dto.response.AppointmentResponse;
+import com.tiora.mob.dto.response.AppointmentActivityResponse;
 import com.tiora.mob.entity.*;
 import com.tiora.mob.exception.ResourceNotFoundException;
 import com.tiora.mob.exception.UnauthorizedException;
@@ -47,6 +48,9 @@ public class AppointmentService {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private BranchRepository branchRepository;
 
     @Autowired
     private MobileAppointmentStreamPublisher streamPublisher;
@@ -94,6 +98,12 @@ public class AppointmentService {
         appointment.setBranchId(appointmentRequest.getBranchId()); // Set branch ID
         appointment.setAppointmentDate(appointmentRequest.getAppointmentDate());
         appointment.setEstimatedEndTime(appointmentRequest.getEstimatedEndTime());
+        
+        // Set timestamps with current time in the format: 2025-09-06 12:00:00
+        LocalDateTime now = LocalDateTime.now();
+        appointment.setCreatedAt(now);
+        appointment.setUpdatedAt(now);
+        
         appointment.setServicePrice(totalServicePrice); // Use total price of all services
         appointment.setDiscountAmount(appointmentRequest.getDiscountAmount() != null ? appointmentRequest.getDiscountAmount() : BigDecimal.ZERO);
         appointment.setTaxAmount(BigDecimal.ZERO); // Removed tax amount
@@ -119,7 +129,7 @@ public class AppointmentService {
         BigDecimal total = totalServicePrice.subtract(appointment.getDiscountAmount());
         appointment.setTotalAmount(total);
 
-        appointment.setStatus(Appointment.AppointmentStatus.IN_PROGRESS);
+        appointment.setStatus(Appointment.AppointmentStatus.SCHEDULED);
         appointment.setPaymentStatus(Appointment.PaymentStatus.PENDING);
 
         // Set a temporary appointment number to satisfy NOT NULL constraint
@@ -146,6 +156,121 @@ public class AppointmentService {
         return appointments.stream()
                 .map(this::mapToAppointmentResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public AppointmentResponse updateAppointment(Long appointmentId, AppointmentRequest appointmentRequest) {
+        logger.info("Updating appointment with ID: {}", appointmentId);
+        
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + appointmentId));
+        
+        // Update appointment details if provided
+        if (appointmentRequest.getAppointmentDate() != null) {
+            appointment.setAppointmentDate(appointmentRequest.getAppointmentDate());
+        }
+        
+        if (appointmentRequest.getEstimatedEndTime() != null) {
+            appointment.setEstimatedEndTime(appointmentRequest.getEstimatedEndTime());
+        }
+        
+        // Update employee if provided
+        if (appointmentRequest.getEmployeeId() != null) {
+            Employee employee = employeeRepository.findById(appointmentRequest.getEmployeeId())
+                    .orElseThrow(() -> new RuntimeException("Employee not found"));
+            appointment.setEmployee(employee);
+        }
+        
+        // Update timestamps with current time in the format: 2025-09-06 12:00:00
+        LocalDateTime now = LocalDateTime.now();
+        appointment.setUpdatedAt(now);
+        
+        // Update payment status and set payment received timestamp if payment is made
+        if (appointmentRequest.getPaymentMethod() != null) {
+            try {
+                appointment.setPaymentMethod(Appointment.PaymentMethod.valueOf(appointmentRequest.getPaymentMethod().toUpperCase()));
+                // Set payment received timestamp when payment method is updated
+                appointment.setPaymentReceivedAt(now);
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid payment method: " + appointmentRequest.getPaymentMethod());
+            }
+        }
+        
+        // Save updated appointment
+        appointment = appointmentRepository.save(appointment);
+        
+        // Publish appointment updated event to Redis Stream
+        publishAppointmentUpdatedEvent(appointment);
+        
+        logger.info("Appointment updated successfully with ID: {}", appointmentId);
+        return mapToAppointmentResponse(appointment);
+    }
+
+    @Transactional
+    public void cancelAppointment(Long appointmentId, String cancellationReason) {
+        logger.info("Cancelling appointment with ID: {}", appointmentId);
+        
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + appointmentId));
+        
+        // Set cancellation details with proper timestamp format: 2025-09-06 12:00:00
+        LocalDateTime now = LocalDateTime.now();
+        appointment.setStatus(Appointment.AppointmentStatus.CANCELLED);
+        appointment.setCancellationReason(cancellationReason);
+        appointment.setCancelledBy("Customer"); // or get from token
+        appointment.setCancelledAt(now);
+        appointment.setUpdatedAt(now);
+        
+        // Save cancelled appointment
+        appointmentRepository.save(appointment);
+        
+        // Publish appointment cancelled event to Redis Stream
+        publishAppointmentCancelledEvent(appointment);
+        
+        logger.info("Appointment cancelled successfully with ID: {}", appointmentId);
+    }
+
+    @Transactional
+    public void markAppointmentAsCompleted(Long appointmentId) {
+        logger.info("Marking appointment as completed with ID: {}", appointmentId);
+        
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + appointmentId));
+        
+        // Set completion details with proper timestamp format: 2025-09-06 12:00:00
+        LocalDateTime now = LocalDateTime.now();
+        appointment.setStatus(Appointment.AppointmentStatus.COMPLETED);
+        appointment.setActualEndTime(now);
+        appointment.setUpdatedAt(now);
+        
+        // Set actual start time if not already set
+        if (appointment.getActualStartTime() == null) {
+            appointment.setActualStartTime(appointment.getAppointmentDate());
+        }
+        
+        // Save completed appointment
+        appointmentRepository.save(appointment);
+        
+        logger.info("Appointment marked as completed with ID: {}", appointmentId);
+    }
+
+    @Transactional
+    public void markAppointmentAsStarted(Long appointmentId) {
+        logger.info("Marking appointment as started with ID: {}", appointmentId);
+        
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + appointmentId));
+        
+        // Set start details with proper timestamp format: 2025-09-06 12:00:00
+        LocalDateTime now = LocalDateTime.now();
+        appointment.setStatus(Appointment.AppointmentStatus.IN_PROGRESS);
+        appointment.setActualStartTime(now);
+        appointment.setUpdatedAt(now);
+        
+        // Save started appointment
+        appointmentRepository.save(appointment);
+        
+        logger.info("Appointment marked as started with ID: {}", appointmentId);
     }
 
 
@@ -263,9 +388,149 @@ public class AppointmentService {
         }
     }
 
+    /**
+     * Publishes appointment updated event to Redis Stream for web backend notification
+     */
+    private void publishAppointmentUpdatedEvent(Appointment appointment) {
+        try {
+            Map<String, Object> appointmentData = new HashMap<>();
+            appointmentData.put("appointment_number", appointment.getAppointmentNumber());
+            appointmentData.put("appointment_date", appointment.getAppointmentDate().toString());
+            appointmentData.put("estimated_end_time", appointment.getEstimatedEndTime() != null ? appointment.getEstimatedEndTime().toString() : "");
+            appointmentData.put("actual_start_time", appointment.getActualStartTime() != null ? appointment.getActualStartTime().toString() : "");
+            appointmentData.put("actual_end_time", appointment.getActualEndTime() != null ? appointment.getActualEndTime().toString() : "");
+            appointmentData.put("status", appointment.getStatus().toString());
+            appointmentData.put("payment_status", appointment.getPaymentStatus().toString());
+            appointmentData.put("payment_received_at", appointment.getPaymentReceivedAt() != null ? appointment.getPaymentReceivedAt().toString() : "");
+            appointmentData.put("created_at", appointment.getCreatedAt().toString());
+            appointmentData.put("updated_at", appointment.getUpdatedAt().toString());
+
+            streamPublisher.publishAppointmentUpdated(
+                appointment.getSalon().getId(),
+                appointment.getId(),
+                "IN_PROGRESS", // old status (could be stored if needed)
+                appointment.getStatus().toString() // new status
+            );
+        } catch (Exception e) {
+            logger.error("Failed to publish appointment updated event for appointment {}: {}", 
+                        appointment.getId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Publishes appointment cancelled event to Redis Stream for web backend notification
+     */
+    private void publishAppointmentCancelledEvent(Appointment appointment) {
+        try {
+            Map<String, Object> appointmentData = new HashMap<>();
+            appointmentData.put("appointment_number", appointment.getAppointmentNumber());
+            appointmentData.put("cancellation_reason", appointment.getCancellationReason() != null ? appointment.getCancellationReason() : "");
+            appointmentData.put("cancelled_by", appointment.getCancelledBy() != null ? appointment.getCancelledBy() : "");
+            appointmentData.put("cancelled_at", appointment.getCancelledAt() != null ? appointment.getCancelledAt().toString() : "");
+            appointmentData.put("status", appointment.getStatus().toString());
+            appointmentData.put("updated_at", appointment.getUpdatedAt().toString());
+
+            streamPublisher.publishAppointmentCancelled(
+                appointment.getSalon().getId(),
+                appointment.getId(),
+                appointment.getCancellationReason() != null ? appointment.getCancellationReason() : "Customer cancellation"
+            );
+        } catch (Exception e) {
+            logger.error("Failed to publish appointment cancelled event for appointment {}: {}", 
+                        appointment.getId(), e.getMessage(), e);
+        }
+    }
+
         // Generate unique appointment number using id and date
         private String generateAppointmentNumber(Long id, LocalDateTime appointmentDate) {
                 String datePrefix = appointmentDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
                 return String.format("APT-%s-%04d", datePrefix, id);
         }
+
+    /**
+     * Get appointment activities by status
+     * @param status The appointment status filter
+     * @param customerId Optional customer ID filter
+     * @return List of appointment activities
+     */
+    public List<AppointmentActivityResponse> getAppointmentActivities(Appointment.AppointmentStatus status, Long customerId) {
+        logger.info("Fetching appointment activities for status: {} and customerId: {}", status, customerId);
+        
+        List<Appointment> appointments;
+        
+        if (customerId != null) {
+            appointments = appointmentRepository.findByCustomerIdAndStatusWithDetails(customerId, status);
+        } else {
+            appointments = appointmentRepository.findByStatusWithDetails(status);
+        }
+        
+        return appointments.stream()
+            .map(this::mapToAppointmentActivityResponse)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Get appointment activities by multiple statuses
+     * @param statuses List of appointment statuses to filter
+     * @param customerId Optional customer ID filter
+     * @return List of appointment activities
+     */
+    public List<AppointmentActivityResponse> getAppointmentActivitiesByStatuses(List<Appointment.AppointmentStatus> statuses, Long customerId) {
+        logger.info("Fetching appointment activities for statuses: {} and customerId: {}", statuses, customerId);
+        
+        List<Appointment> appointments;
+        
+        if (customerId != null) {
+            appointments = appointmentRepository.findByCustomerIdAndStatusInWithDetails(customerId, statuses);
+        } else {
+            appointments = appointmentRepository.findByStatusInWithDetails(statuses);
+        }
+        
+        return appointments.stream()
+            .map(this::mapToAppointmentActivityResponse)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Map Appointment entity to AppointmentActivityResponse DTO
+     */
+    private AppointmentActivityResponse mapToAppointmentActivityResponse(Appointment appointment) {
+        // Get branch from the appointment entity directly
+        Branch branch = appointment.getBranch();
+        
+        return AppointmentActivityResponse.builder()
+            .appointmentId(appointment.getId())
+            .appointmentNumber(appointment.getAppointmentNumber())
+            .status(appointment.getStatus())
+            .salonName(appointment.getSalon() != null ? appointment.getSalon().getName() : null)
+            .branchName(branch != null ? branch.getBranchName() : null)
+            .barberName(appointment.getEmployee() != null ? 
+                appointment.getEmployee().getFirstName() + " " + appointment.getEmployee().getLastName() : null)
+            .latitude(branch != null ? branch.getLatitude() : null)
+            .longitude(branch != null ? branch.getLongitude() : null)
+            .appointmentDateTime(appointment.getAppointmentDate())
+            .servicePrice(appointment.getServicePrice())
+            .discountAmount(appointment.getDiscountAmount())
+            .totalAmount(appointment.getTotalAmount())
+            .paymentStatus(appointment.getPaymentStatus())
+            .actualStartTime(appointment.getActualStartTime())
+            .actualEndTime(appointment.getActualEndTime())
+            .cancellationReason(appointment.getCancellationReason())
+            .cancelledAt(appointment.getCancelledAt())
+            .cancelledBy(appointment.getCancelledBy())
+            .serviceName(appointment.getService() != null ? appointment.getService().getName() : null)
+            .branchAddress(branch != null ? buildBranchAddress(branch) : null)
+            .branchPhoneNumber(branch != null ? branch.getBranchPhoneNumber() : null)
+            .build();
+    }
+
+    /**
+     * Build branch address from branch coordinates
+     */
+    private String buildBranchAddress(Branch branch) {
+        if (branch.getLatitude() != null && branch.getLongitude() != null) {
+            return String.format("Lat: %s, Lng: %s", branch.getLatitude(), branch.getLongitude());
+        }
+        return "Location not available";
+    }
 }

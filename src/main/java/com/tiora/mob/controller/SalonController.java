@@ -36,11 +36,24 @@ public class SalonController {
         try {
             type = SalonType.valueOf(salonType.toUpperCase());
         } catch (IllegalArgumentException e) {
+            logger.error("Invalid salon_type provided: {}. Valid values are: GENTS, LADIES, UNISEX", salonType);
             return ResponseEntity.badRequest().build();
         }
         List<Branch> branches = branchService.getBranchesBySalonType(type);
+        logger.info("Found {} branches for salon_type: {}", branches.size(), salonType);
         List<BranchResponse> response = branches.stream().map(this::toBranchResponse).collect(java.util.stream.Collectors.toList());
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/salon-types")
+    public ResponseEntity<String[]> getValidSalonTypes() {
+        logger.info("Fetching valid salon types");
+        SalonType[] salonTypes = SalonType.values();
+        String[] typeNames = new String[salonTypes.length];
+        for (int i = 0; i < salonTypes.length; i++) {
+            typeNames[i] = salonTypes[i].name();
+        }
+        return ResponseEntity.ok(typeNames);
     }
 
     private BranchResponse toBranchResponse(Branch branch) {
@@ -52,6 +65,7 @@ public class SalonController {
         dto.setLatitude(branch.getLatitude());
         dto.setBranchPhoneNumber(branch.getBranchPhoneNumber());
         dto.setBranchEmail(branch.getBranchEmail());
+        dto.setDescription(branch.getDescription());
         dto.setBranchImage(branch.getBranchImage());
         dto.setCreatedAt(branch.getCreatedAt());
         dto.setUpdatedAt(branch.getUpdatedAt());

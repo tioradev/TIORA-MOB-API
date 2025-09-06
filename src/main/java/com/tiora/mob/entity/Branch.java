@@ -46,6 +46,9 @@ public class Branch {
     @Column(name = "branch_email", length = 100)
     private String branchEmail;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     // Weekly schedule stored as JSON
     @Convert(converter = WeeklyScheduleConverter.class)
     @Column(name = "weekly_schedule", columnDefinition = "TEXT")
@@ -68,12 +71,14 @@ public class Branch {
 
     // --- Added for DTO/controller compatibility ---
     public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
     public String getBranchName() { return branchName; }
     public BranchStatus getStatus() { return status; }
     public java.math.BigDecimal getLongitude() { return longitude; }
     public java.math.BigDecimal getLatitude() { return latitude; }
     public String getBranchPhoneNumber() { return branchPhoneNumber; }
     public String getBranchEmail() { return branchEmail; }
+    public String getDescription() { return description; }
     public String getBranchImage() { return branchImage; }
     public java.time.LocalDateTime getCreatedAt() { return createdAt; }
     public java.time.LocalDateTime getUpdatedAt() { return updatedAt; }

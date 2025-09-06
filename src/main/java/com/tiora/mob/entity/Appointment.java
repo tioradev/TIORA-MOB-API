@@ -44,7 +44,23 @@ public class Appointment {
     public void setEmployee(Employee employee) { this.employee = employee; }
 
     // Removed duplicate appointmentNumber field; only the annotated one remains below
-    public void setBranchId(Long branchId) { this.branchId = branchId; }
+    public void setBranchId(Long branchId) { 
+        // For backward compatibility, you might need to load the branch entity
+        // This is a simplified approach - in practice, you should inject BranchRepository
+        if (branchId != null) {
+            this.branch = new Branch();
+            this.branch.setBranchId(branchId);
+        } else {
+            this.branch = null;
+        }
+    }
+    
+    public Long getBranchId() {
+        return this.branch != null ? this.branch.getBranchId() : null;
+    }
+    
+    public Branch getBranch() { return branch; }
+    public void setBranch(Branch branch) { this.branch = branch; }
     public LocalDateTime getAppointmentDate() { return appointmentDate; }
     public void setAppointmentDate(LocalDateTime appointmentDate) { this.appointmentDate = appointmentDate; }
     public LocalDateTime getEstimatedEndTime() { return estimatedEndTime; }
@@ -93,6 +109,8 @@ public class Appointment {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public LocalDateTime getPaymentReceivedAt() { return paymentReceivedAt; }
+    public void setPaymentReceivedAt(LocalDateTime paymentReceivedAt) { this.paymentReceivedAt = paymentReceivedAt; }
     public Service getService() { return service; }
     // Removed duplicate getService() method
 
@@ -124,8 +142,9 @@ public class Appointment {
     @JoinColumn(name = "salon_id", nullable = false)
     private Salon salon;
 
-    @Column(name = "branch_id")
-    private Long branchId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id", nullable = true)
+    private Branch branch;
 
     @Column(name = "appointment_date", nullable = false)
     private LocalDateTime appointmentDate;
@@ -203,6 +222,9 @@ public class Appointment {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "payment_received_at")
+    private LocalDateTime paymentReceivedAt;
 
 
 
