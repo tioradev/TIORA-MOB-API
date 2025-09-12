@@ -1,4 +1,3 @@
-
 package com.tiora.mob.entity;
 
 import java.time.LocalTime;
@@ -62,7 +61,7 @@ public class Employee {
     }
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = true)
     private EmployeeStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -106,11 +105,32 @@ public class Employee {
     }
 
     @CreatedDate
-    @Column(updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public EmployeeStatus getStatus() {
+        return status;
+    }
+
+    public Salon getSalon() {
+        return salon;
+    }
+
+    public Branch getBranch() {
+        return branch;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 
     public enum Role {
         ADMIN, BARBER, RECEPTIONIST

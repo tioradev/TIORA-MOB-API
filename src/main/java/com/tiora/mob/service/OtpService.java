@@ -78,15 +78,14 @@ public class OtpService {
         // Store OTP in cache with expiration
         getOtpCache().put(phoneNumber, new OtpData(otp, LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES)));
 
-        // In a real application, you would send this via SMS
-        // For now, we'll just return it in the response for testing
-        String message = "OTP has been sent to your phone number";
+    // In a real application, you would send this via SMS
+    // For now, we'll just return it in the response for testing
+    String message = "OTP has been sent to your phone number";
 
+    // For development purposes, log the OTP
+    logger.info("OTP for {}: {}", phoneNumber, otp);
 
-        // For development purposes, log the OTP
-        logger.info("OTP for {}: {}", phoneNumber, otp);
-
-        return new OtpResponse(phoneNumber, message);
+    return new OtpResponse(phoneNumber, message, otp);
     }
 
     /**

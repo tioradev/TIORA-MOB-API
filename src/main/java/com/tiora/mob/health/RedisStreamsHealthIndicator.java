@@ -16,7 +16,7 @@ public class RedisStreamsHealthIndicator {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    @Value("${mobile.redis.streams.appointment-stream}")
+    @Value("${salon.redis.streams.appointment-stream}")
     private String appointmentStreamKey;
 
     public boolean isHealthy() {

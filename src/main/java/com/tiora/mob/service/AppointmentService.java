@@ -1,7 +1,7 @@
-
 package com.tiora.mob.service;
 
 
+import com.tiora.mob.dto.AppointmentEventDto;
 import com.tiora.mob.dto.request.AppointmentRequest;
 import com.tiora.mob.dto.response.AppointmentResponse;
 import com.tiora.mob.dto.response.AppointmentActivityResponse;
@@ -51,6 +51,9 @@ public class AppointmentService {
 
     @Autowired
     private BranchRepository branchRepository;
+
+    @Autowired
+    private AppointmentStreamPublisher appointmentStreamPublisher;
 
     @Autowired
     private MobileAppointmentStreamPublisher streamPublisher;
@@ -344,11 +347,7 @@ public class AppointmentService {
                 appointment = appointmentRepository.save(appointment);
                 
                 // Publish appointment cancelled event to Redis Stream
-                streamPublisher.publishAppointmentCancelled(
-                    appointment.getSalon().getId(),
-                    appointment.getId(),
-                    "PAYMENTFAILED"
-                );
+                publishAppointmentCancelledEvent(appointment);
                 
                 // Optionally: add logic to free up the timeslot if needed
                 return mapToAppointmentResponse(appointment);
@@ -374,6 +373,7 @@ public class AppointmentService {
             appointmentData.put("customer_phone", appointment.getCustomer().getPhoneNumber());
             appointmentData.put("employee_name", appointment.getEmployee().getFirstName() + " " + appointment.getEmployee().getLastName());
 
+            // Publish to mobile appointment stream
             streamPublisher.publishAppointmentCreated(
                 appointment.getSalon().getId(),
                 appointment.getBranchId(),
@@ -382,6 +382,7 @@ public class AppointmentService {
                 appointment.getEmployee().getEmployeeId(),
                 appointmentData
             );
+            // Do NOT publish to barber notification stream for new appointment creation
         } catch (Exception e) {
             logger.error("Failed to publish appointment created event for appointment {}: {}", 
                         appointment.getId(), e.getMessage(), e);
