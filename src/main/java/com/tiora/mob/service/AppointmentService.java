@@ -27,6 +27,30 @@ import java.util.stream.Collectors;
 
 @org.springframework.stereotype.Service
 public class AppointmentService {
+    public List<AppointmentActivityResponse> getAppointmentActivitiesFiltered(
+            Appointment.AppointmentStatus status,
+            Long customerId,
+            Long employeeId,
+            java.time.LocalDateTime appointmentDate) {
+        List<Appointment> appointments;
+        if (appointmentDate != null) {
+            java.time.LocalDateTime startDate = appointmentDate;
+            java.time.LocalDateTime endDate = appointmentDate.plusDays(1);
+            appointments = appointmentRepository.findByStatusAndAppointmentDateBetween(status, startDate, endDate);
+        } else if (customerId != null && employeeId != null) {
+            appointments = appointmentRepository.findByStatusAndCustomerIdAndEmployeeId(
+                status, customerId, employeeId);
+        } else if (customerId != null) {
+            appointments = appointmentRepository.findByCustomerIdAndStatusWithDetails(customerId, status);
+        } else if (employeeId != null) {
+            appointments = appointmentRepository.findByStatusAndEmployeeId(status, employeeId);
+        } else {
+            appointments = appointmentRepository.findByStatusWithDetails(status);
+        }
+        return appointments.stream()
+            .map(this::mapToAppointmentActivityResponse)
+            .collect(java.util.stream.Collectors.toList());
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(AppointmentService.class);
 

@@ -12,6 +12,60 @@ import java.util.Optional;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
+    @org.springframework.data.jpa.repository.Query("SELECT a FROM Appointment a " +
+           "JOIN FETCH a.salon s " +
+           "JOIN FETCH a.employee e " +
+           "JOIN FETCH a.service srv " +
+           "LEFT JOIN FETCH a.branch b " +
+           "WHERE a.status = :status AND a.appointmentDate >= :startDate AND a.appointmentDate < :endDate")
+    java.util.List<Appointment> findByStatusAndAppointmentDateBetween(@org.springframework.data.repository.query.Param("status") com.tiora.mob.entity.Appointment.AppointmentStatus status, @org.springframework.data.repository.query.Param("startDate") java.time.LocalDateTime startDate, @org.springframework.data.repository.query.Param("endDate") java.time.LocalDateTime endDate);
+           @org.springframework.data.jpa.repository.Query("SELECT a FROM Appointment a " +
+                  "JOIN FETCH a.salon s " +
+                  "JOIN FETCH a.employee e " +
+                  "JOIN FETCH a.service srv " +
+                  "LEFT JOIN FETCH a.branch b " +
+                  "WHERE a.status = :status AND a.customer.id = :customerId AND a.employee.employeeId = :employeeId AND a.appointmentDate = :appointmentDate")
+           java.util.List<Appointment> findByStatusAndCustomerIdAndEmployeeIdAndAppointmentDate(@org.springframework.data.repository.query.Param("status") com.tiora.mob.entity.Appointment.AppointmentStatus status, @org.springframework.data.repository.query.Param("customerId") Long customerId, @org.springframework.data.repository.query.Param("employeeId") Long employeeId, @org.springframework.data.repository.query.Param("appointmentDate") java.time.LocalDateTime appointmentDate);
+
+           @org.springframework.data.jpa.repository.Query("SELECT a FROM Appointment a " +
+                  "JOIN FETCH a.salon s " +
+                  "JOIN FETCH a.employee e " +
+                  "JOIN FETCH a.service srv " +
+                  "LEFT JOIN FETCH a.branch b " +
+                  "WHERE a.status = :status AND a.customer.id = :customerId AND a.employee.employeeId = :employeeId")
+           java.util.List<Appointment> findByStatusAndCustomerIdAndEmployeeId(@org.springframework.data.repository.query.Param("status") com.tiora.mob.entity.Appointment.AppointmentStatus status, @org.springframework.data.repository.query.Param("customerId") Long customerId, @org.springframework.data.repository.query.Param("employeeId") Long employeeId);
+
+           @org.springframework.data.jpa.repository.Query("SELECT a FROM Appointment a " +
+                  "JOIN FETCH a.salon s " +
+                  "JOIN FETCH a.employee e " +
+                  "JOIN FETCH a.service srv " +
+                  "LEFT JOIN FETCH a.branch b " +
+                  "WHERE a.status = :status AND a.customer.id = :customerId AND a.appointmentDate = :appointmentDate")
+           java.util.List<Appointment> findByStatusAndCustomerIdAndAppointmentDate(@org.springframework.data.repository.query.Param("status") com.tiora.mob.entity.Appointment.AppointmentStatus status, @org.springframework.data.repository.query.Param("customerId") Long customerId, @org.springframework.data.repository.query.Param("appointmentDate") java.time.LocalDateTime appointmentDate);
+
+           @org.springframework.data.jpa.repository.Query("SELECT a FROM Appointment a " +
+                  "JOIN FETCH a.salon s " +
+                  "JOIN FETCH a.employee e " +
+                  "JOIN FETCH a.service srv " +
+                  "LEFT JOIN FETCH a.branch b " +
+                  "WHERE a.status = :status AND a.employee.employeeId = :employeeId AND a.appointmentDate = :appointmentDate")
+           java.util.List<Appointment> findByStatusAndEmployeeIdAndAppointmentDate(@org.springframework.data.repository.query.Param("status") com.tiora.mob.entity.Appointment.AppointmentStatus status, @org.springframework.data.repository.query.Param("employeeId") Long employeeId, @org.springframework.data.repository.query.Param("appointmentDate") java.time.LocalDateTime appointmentDate);
+
+           @org.springframework.data.jpa.repository.Query("SELECT a FROM Appointment a " +
+                  "JOIN FETCH a.salon s " +
+                  "JOIN FETCH a.employee e " +
+                  "JOIN FETCH a.service srv " +
+                  "LEFT JOIN FETCH a.branch b " +
+                  "WHERE a.status = :status AND a.employee.employeeId = :employeeId")
+           java.util.List<Appointment> findByStatusAndEmployeeId(@org.springframework.data.repository.query.Param("status") com.tiora.mob.entity.Appointment.AppointmentStatus status, @org.springframework.data.repository.query.Param("employeeId") Long employeeId);
+
+           @org.springframework.data.jpa.repository.Query("SELECT a FROM Appointment a " +
+                  "JOIN FETCH a.salon s " +
+                  "JOIN FETCH a.employee e " +
+                  "JOIN FETCH a.service srv " +
+                  "LEFT JOIN FETCH a.branch b " +
+                  "WHERE a.status = :status AND a.appointmentDate = :appointmentDate")
+           java.util.List<Appointment> findByStatusAndAppointmentDate(@org.springframework.data.repository.query.Param("status") com.tiora.mob.entity.Appointment.AppointmentStatus status, @org.springframework.data.repository.query.Param("appointmentDate") java.time.LocalDateTime appointmentDate);
     // Find by appointment number
     Optional<Appointment> findByAppointmentNumber(String appointmentNumber);
 

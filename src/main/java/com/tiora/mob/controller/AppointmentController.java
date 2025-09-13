@@ -104,15 +104,20 @@ public class AppointmentController {
     public ResponseEntity<List<AppointmentActivityResponse>> getAppointmentActivities(
             @RequestParam("status") Appointment.AppointmentStatus status,
             @RequestParam(value = "customerId", required = false) Long customerId,
+            @RequestParam(value = "employeeId", required = false) Long employeeId,
+            @RequestParam(value = "appointmentDate", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate appointmentDate,
             @RequestHeader("Authorization") String token) {
-        
-        logger.info("getAppointmentActivities called with status: {} and customerId: {}", status, customerId);
-        
-        List<AppointmentActivityResponse> activities = appointmentService.getAppointmentActivities(status, customerId);
-        
-        logger.info("Found {} appointment activities for status: {} and customerId: {}", 
-                   activities.size(), status, customerId);
-        
+
+        java.time.LocalDateTime appointmentDateTime = null;
+        if (appointmentDate != null) {
+            appointmentDateTime = appointmentDate.atStartOfDay();
+        }
+
+        logger.info("getAppointmentActivities called with status: {}, customerId: {}, employeeId: {}, appointmentDate: {} (full day)", status, customerId, employeeId, appointmentDateTime);
+
+        List<AppointmentActivityResponse> activities = appointmentService.getAppointmentActivitiesFiltered(status, customerId, employeeId, appointmentDateTime);
+
+        logger.info("Found {} appointment activities for filters", activities.size());
         return ResponseEntity.ok(activities);
     }
 
