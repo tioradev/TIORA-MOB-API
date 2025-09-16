@@ -201,6 +201,11 @@ import org.slf4j.LoggerFactory;
 
 @Service
 public class CustomerService {
+    public String getLatestVisitJsonByCustomerId(Long customerId) {
+        Customer customer = customerRepository.findById(customerId)
+            .orElseThrow(() -> new RuntimeException("Customer not found with id: " + customerId));
+        return customer.getLatestVisitJson();
+    }
     private static final Logger logger = LoggerFactory.getLogger(CustomerService.class);
 
     @Autowired

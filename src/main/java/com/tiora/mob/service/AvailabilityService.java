@@ -21,6 +21,8 @@ import com.tiora.mob.entity.WorkingHours;
 @org.springframework.stereotype.Service
 public class AvailabilityService {
     @Autowired
+    private com.tiora.mob.repository.EmployeeLeaveRepository employeeLeaveRepository;
+    @Autowired
     private AppointmentRepository appointmentRepository;
     @Autowired
     private EmployeeRepository employeeRepository;
@@ -28,6 +30,16 @@ public class AvailabilityService {
     private ServiceRepository serviceRepository;
 
     public AvailableTimeSlotsResponse getAvailableTimeSlots(Long salonId, String serviceIds, Long barberId, String date, String customerGender) {
+        java.time.LocalDate selectedDate = java.time.LocalDate.parse(date);
+        // Check if barber is on APPROVED leave for selected date
+        java.util.List<com.tiora.mob.entity.EmployeeLeave> leaves = employeeLeaveRepository.findByEmployee_EmployeeId(barberId);
+        boolean isOnLeave = leaves.stream().anyMatch(l ->
+            l.getStatus() == com.tiora.mob.entity.EmployeeLeave.LeaveStatus.APPROVED &&
+            ( !selectedDate.isBefore(l.getStartDate()) && !selectedDate.isAfter(l.getEndDate()) )
+        );
+        if (isOnLeave) {
+            throw new com.tiora.mob.exception.ResourceNotFoundException("You selected Barber is not available today. Please select another Day or change the barber");
+        }
         Employee employee = employeeRepository.findByEmployeeIdAndSalonId(barberId, salonId)
             .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         // Parse serviceIds and sum durations

@@ -1,5 +1,9 @@
 package com.tiora.mob.controller;
 
+import com.tiora.mob.dto.response.EmployeeAppointmentStatsDTO;
+
+import com.tiora.mob.service.AppointmentService;
+
 import com.tiora.mob.dto.response.BarberResponse;
 import com.tiora.mob.dto.response.TimeSlotResponse;
 import com.tiora.mob.service.AvailabilityService;
@@ -19,6 +23,14 @@ import org.slf4j.LoggerFactory;
 @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth")
 @RequestMapping("/mobile/employee")
 public class EmployeeController {
+    @Autowired
+    private AppointmentService appointmentService;
+
+    @GetMapping("/employee/{employeeId}/appointment-stats")
+    public ResponseEntity<EmployeeAppointmentStatsDTO> getAppointmentStats(@PathVariable Long employeeId) {
+        EmployeeAppointmentStatsDTO stats = appointmentService.getEmployeeAppointmentStats(employeeId);
+        return ResponseEntity.ok(stats);
+    }
     @GetMapping("/by-service/{serviceId}")
     public ResponseEntity<List<BarberResponse>> getBarbersByService(
             @PathVariable Long serviceId,

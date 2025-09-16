@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 public class Salon {
+    public Long getId() { return id; }
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

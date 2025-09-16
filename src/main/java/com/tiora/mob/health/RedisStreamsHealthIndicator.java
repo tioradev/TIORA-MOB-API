@@ -13,6 +13,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class RedisStreamsHealthIndicator {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(RedisStreamsHealthIndicator.class);
 
     private final RedisTemplate<String, Object> redisTemplate;
 

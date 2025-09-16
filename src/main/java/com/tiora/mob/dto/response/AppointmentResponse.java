@@ -1,4 +1,5 @@
 package com.tiora.mob.dto.response;
+
 import com.tiora.mob.entity.Appointment;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;

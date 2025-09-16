@@ -18,6 +18,21 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "appointments")
 public class Appointment {
+    @Column(name = "customer_paid", nullable = false)
+    private Integer customerPaid = 0;
+
+    public Integer getCustomerPaid() { return customerPaid; }
+    public void setCustomerPaid(Integer customerPaid) { this.customerPaid = customerPaid; }
+    public Salon getSalon() {
+        return this.salon;
+    }
+    public void setSalon(Salon salon) {
+        this.salon = salon;
+    }
+
+    public Long getId() {
+        return this.id;
+    }
     // id handled by Lombok @Data
     // ...existing code...
 
@@ -282,7 +297,7 @@ public class Appointment {
     }
 
     public enum AppointmentStatus {
-        SCHEDULED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+    PENDING, SCHEDULED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
     }
 
     public enum PaymentStatus {

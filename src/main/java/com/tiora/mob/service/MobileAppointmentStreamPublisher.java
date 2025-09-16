@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tiora.mob.dto.AppointmentEventDto.EventType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,25 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class MobileAppointmentStreamPublisher {
+    private static final Logger log = LoggerFactory.getLogger(MobileAppointmentStreamPublisher.class);
+    @Value("${salon.redis.streams.customer-stream:customer:appointment-events}")
+    private String customerStreamKey;
+
+    public void publishCustomerNotification(Long customerId, Long appointmentId, String status, String message) {
+        try {
+            Map<String, String> fields = new HashMap<>();
+            fields.put("messageType", "customer_appointment_notification");
+            fields.put("eventType", status);
+            fields.put("timestamp", LocalDateTime.now().toString());
+            fields.put("customerId", String.valueOf(customerId));
+            fields.put("appointmentId", String.valueOf(appointmentId));
+            fields.put("message", message);
+            Object messageId = redisTemplate.opsForStream().add(customerStreamKey, fields);
+            log.info("Published customer notification with ID: {} for appointment: {}", messageId, appointmentId);
+        } catch (Exception e) {
+            log.error("Error publishing customer notification for appointment {}: {}", appointmentId, e.getMessage(), e);
+        }
+    }
     public void publishAppointmentUpdated(Long salonId, Long appointmentId, String oldStatus, String newStatus) {
         try {
             Map<String, Object> data = new HashMap<>();
@@ -26,8 +47,15 @@ public class MobileAppointmentStreamPublisher {
 
             Map<String, String> fields = new HashMap<>();
             fields.put("messageType", "appointment_updated");
-            fields.put("eventType", EventType.UPDATED.name());
-            fields.put("sourceSystem", "mobile_backend");
+            // Use eventType COMPLETED or CANCELLED based on newStatus
+            if ("COMPLETED".equalsIgnoreCase(newStatus)) {
+                fields.put("eventType", "COMPLETED");
+            } else if ("CANCELLED".equalsIgnoreCase(newStatus)) {
+                fields.put("eventType", "CANCELLED");
+            } else {
+                fields.put("eventType", EventType.UPDATED.name());
+            }
+            fields.put("source", "mobile_backend");
             fields.put("timestamp", LocalDateTime.now().toString());
             fields.put("salonId", String.valueOf(salonId));
             fields.put("appointmentId", String.valueOf(appointmentId));
@@ -139,9 +167,9 @@ public class MobileAppointmentStreamPublisher {
             data.put("cancellationTime", LocalDateTime.now().toString());
 
             Map<String, String> fields = new HashMap<>();
-            fields.put("messageType", "appointment_cancelled");
-            fields.put("eventType", EventType.CANCELLED.name());
-            fields.put("sourceSystem", "mobile_backend");
+            fields.put("messageType", "appointment_updated");
+            fields.put("eventType", "CANCELLED");
+            fields.put("source", "mobile_backend");
             fields.put("timestamp", LocalDateTime.now().toString());
             fields.put("salonId", String.valueOf(salonId));
             fields.put("appointmentId", String.valueOf(appointmentId));

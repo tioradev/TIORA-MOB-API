@@ -18,6 +18,11 @@ import java.time.LocalDateTime;
 @Table(name = "promotions")
 @EntityListeners(AuditingEntityListener.class)
 public class Promotion {
+    public Long getPromotionId() { return promotionId; }
+    public String getPromotionName() { return promotionName; }
+    public String getDescription() { return description; }
+    public String getImageUrl() { return imageUrl; }
+    public PromotionStatus getStatus() { return status; }
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

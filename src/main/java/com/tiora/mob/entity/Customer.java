@@ -19,6 +19,11 @@ import java.util.List;
 @Table(name = "customers")
 @EntityListeners(AuditingEntityListener.class)
 public class Customer {
+    @Column(name = "latest_visit_json", columnDefinition = "TEXT")
+    private String latestVisitJson;
+
+    public String getLatestVisitJson() { return latestVisitJson; }
+    public void setLatestVisitJson(String latestVisitJson) { this.latestVisitJson = latestVisitJson; }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getPhoneNumber() { return phoneNumber; }

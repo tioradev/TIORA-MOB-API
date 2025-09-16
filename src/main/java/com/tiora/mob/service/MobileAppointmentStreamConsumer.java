@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 @Service
 @Slf4j
 public class MobileAppointmentStreamConsumer {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MobileAppointmentStreamConsumer.class);
 
     @Value("${salon.redis.streams.appointment-stream}")
     private String appointmentStreamKey;

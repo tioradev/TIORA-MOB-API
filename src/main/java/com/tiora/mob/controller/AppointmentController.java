@@ -23,6 +23,21 @@ import org.slf4j.LoggerFactory;
 @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth")
 @RequestMapping("/mobile/appointments")
 public class AppointmentController {
+    @PutMapping("/customer-paid/{appointmentId}")
+    public ResponseEntity<?> updateCustomerPaid(@PathVariable Long appointmentId) {
+        Map<String, Object> result = appointmentService.updateCustomerPaid(appointmentId);
+        if (!(Boolean) result.getOrDefault("success", false)) {
+            return ResponseEntity.badRequest().body(Map.of("error", result.get("message")));
+        }
+        return ResponseEntity.ok(Map.of("message", result.get("message")));
+    }
+    @PutMapping("/status")
+    public ResponseEntity<?> updateAppointmentStatus(
+            @Valid @RequestBody com.tiora.mob.dto.request.AppointmentStatusUpdateRequest request,
+            @RequestHeader("Authorization") String token) {
+        appointmentService.updateAppointmentStatus(token, request);
+        return ResponseEntity.ok().build();
+    }
     private static final Logger logger = LoggerFactory.getLogger(AppointmentController.class);
 
     @Autowired

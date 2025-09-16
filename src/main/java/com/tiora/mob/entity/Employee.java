@@ -19,6 +19,8 @@ import java.util.Map;
 @NoArgsConstructor
 @Builder
 public class Employee {
+    @Column(name = "notes", length = 1000)
+    private String notes;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "employee_id")

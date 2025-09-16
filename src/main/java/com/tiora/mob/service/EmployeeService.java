@@ -96,9 +96,10 @@ public List<BarberResponse> getBarbersByServiceIdGenderAndBranch(Long serviceId,
         .lastName(employee.getLastName())
         .email(employee.getEmail())
         .phoneNumber(employee.getPhoneNumber())
-    .specializations(employee.getSpecializations())
+        .specializations(employee.getSpecializations())
         .ratings(employee.getRatings())
         .profileImageUrl(employee.getProfileImageUrl())
+        .notes(employee.getNotes())
         .build();
     }
     // Duplicate getBarbersByServiceId(Long serviceId) removed

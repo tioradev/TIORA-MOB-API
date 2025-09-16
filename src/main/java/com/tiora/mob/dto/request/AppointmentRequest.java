@@ -19,6 +19,16 @@ import java.util.List;
 @Builder
 @Schema(description = "Request DTO for creating/updating appointments")
 public class AppointmentRequest {
+        public BigDecimal getDiscountAmount() { return null; }
+        public List<Long> getServiceIds() { return serviceIds; }
+        public Long getEmployeeId() { return employeeId; }
+        public Long getSalonId() { return salonId; }
+        public Long getBranchId() { return branchId; }
+        public Long getCustomerId() { return customerId; }
+        public String getPaymentMethod() { return paymentMethod; }
+        public Integer getRating() { return rating; }
+        public LocalDateTime getAppointmentDate() { return appointmentDate; }
+        public LocalDateTime getEstimatedEndTime() { return estimatedEndTime; }
     @Schema(description = "List of Service IDs. Required. Must not be empty. Each must be a valid service ID.", example = "[1, 2, 3]", required = true)
     @NotEmpty(message = "At least one service ID is required")
     private List<Long> serviceIds;

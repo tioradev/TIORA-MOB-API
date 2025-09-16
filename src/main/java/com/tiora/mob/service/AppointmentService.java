@@ -1,5 +1,7 @@
 package com.tiora.mob.service;
 
+import com.tiora.mob.dto.response.EmployeeAppointmentStatsDTO;
+
 
 import com.tiora.mob.dto.AppointmentEventDto;
 import com.tiora.mob.dto.request.AppointmentRequest;
@@ -27,6 +29,127 @@ import java.util.stream.Collectors;
 
 @org.springframework.stereotype.Service
 public class AppointmentService {
+    @org.springframework.beans.factory.annotation.Value("${app.unpaid-appointment-cancel-minutes:5}")
+    private int unpaidAppointmentCancelMinutes;
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 60000)
+    public void cancelUnpaidAppointments() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(unpaidAppointmentCancelMinutes);
+    List<Appointment> unpaidAppointments = appointmentRepository.findByCustomerPaidAndStatusAndCreatedAtBefore(0, Appointment.AppointmentStatus.PENDING, cutoff);
+        for (Appointment appointment : unpaidAppointments) {
+            appointmentRepository.delete(appointment);
+        }
+    }
+    @Transactional
+        public Map<String, Object> updateCustomerPaid(Long appointmentId) {
+            Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElse(null);
+            if (appointment == null) {
+                return Map.of("success", false, "message", "Appointment not found with ID: " + appointmentId);
+            }
+            if (appointment.getStatus() != Appointment.AppointmentStatus.PENDING) {
+                return Map.of("success", false, "message", "Customer paid status can only be updated for PENDING appointments.");
+            }
+        appointment.setCustomerPaid(1);
+        appointment.setStatus(Appointment.AppointmentStatus.SCHEDULED);
+        appointmentRepository.save(appointment);
+        // Publish appointment created event to Redis Stream (moved from createAppointment)
+        publishAppointmentCreatedEvent(appointment, List.of(appointment.getService()), null);
+        return Map.of("success", true, "message", "Customer paid status updated to 1 and status changed to SCHEDULED");
+    }
+    // ...existing code...
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private CustomerRepository customerRepository;
+
+    @Transactional
+    public void updateAppointmentStatus(String token, com.tiora.mob.dto.request.AppointmentStatusUpdateRequest request) {
+        Appointment appointment = appointmentRepository.findById(request.getAppointmentId())
+            .orElseThrow(() -> new com.tiora.mob.exception.ResourceNotFoundException("Appointment not found"));
+        Appointment.AppointmentStatus newStatus = Appointment.AppointmentStatus.valueOf(request.getStatus());
+        appointment.setStatus(newStatus);
+
+        if (newStatus == Appointment.AppointmentStatus.CANCELLED) {
+            Long employeeId = appointment.getEmployee() != null ? appointment.getEmployee().getEmployeeId() : null;
+            String reason = request.getCancellationReason() != null && !request.getCancellationReason().isEmpty()
+                ? request.getCancellationReason()
+                : "cancelled by Stylist - " + employeeId;
+            appointment.setCancellationReason(reason);
+            appointment.setCancelledBy(String.valueOf(employeeId));
+            appointment.setCancelledAt(java.time.LocalDateTime.now());
+            // Publish customer notification for CANCELLED
+            streamPublisher.publishCustomerNotification(
+                appointment.getCustomer().getId(),
+                appointment.getId(),
+                "CANCELLED",
+                reason
+            );
+                // Publish salon notification for CANCELLED
+                if (appointment.getSalon() != null) {
+                    streamPublisher.publishAppointmentUpdated(
+                        appointment.getSalon().getId(),
+                        appointment.getId(),
+                        request.getStatus(),
+                        "CANCELLED"
+                    );
+                }
+        }
+
+        appointmentRepository.save(appointment);
+
+        if (newStatus == Appointment.AppointmentStatus.COMPLETED) {
+            Customer customer = appointment.getCustomer();
+            String latestVisitJson = customer.getLatestVisitJson();
+            java.util.Map<Long, String> visitMap = new java.util.HashMap<>();
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.time.LocalDate today = java.time.LocalDate.now();
+            Long branchId = appointment.getBranch() != null ? appointment.getBranch().getBranchId() : null;
+            try {
+                if (latestVisitJson != null && !latestVisitJson.isEmpty()) {
+                    visitMap = mapper.readValue(latestVisitJson, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<Long, String>>() {});
+                }
+                if (branchId != null) {
+                    visitMap.put(branchId, today.toString());
+                    customer.setLatestVisitJson(mapper.writeValueAsString(visitMap));
+                }
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                // log error or handle as needed
+            }
+            customerRepository.save(customer);
+            // Publish customer notification for COMPLETED
+            streamPublisher.publishCustomerNotification(
+                appointment.getCustomer().getId(),
+                appointment.getId(),
+                "COMPLETED",
+                "Your appointment has been completed."
+            );
+                // Publish salon notification for COMPLETED
+                if (appointment.getSalon() != null) {
+                    streamPublisher.publishAppointmentUpdated(
+                        appointment.getSalon().getId(),
+                        appointment.getId(),
+                        request.getStatus(),
+                        "COMPLETED"
+                    );
+                }
+        }
+    }
+
+    public EmployeeAppointmentStatsDTO getEmployeeAppointmentStats(Long employeeId) {
+    java.time.LocalDate today = java.time.LocalDate.now();
+    java.time.LocalDateTime startOfDay = today.atStartOfDay();
+    java.time.LocalDateTime endOfDay = today.atTime(java.time.LocalTime.MAX);
+    int todaysAppointments = appointmentRepository.countByEmployee_EmployeeIdAndAppointmentDateBetween(employeeId, startOfDay, endOfDay);
+    int completedAppointments = appointmentRepository.countByEmployee_EmployeeIdAndStatus(employeeId, Appointment.AppointmentStatus.COMPLETED);
+    int pendingAppointments = appointmentRepository.countByEmployee_EmployeeIdAndStatus(employeeId, Appointment.AppointmentStatus.SCHEDULED);
+    int scheduledAppointments = appointmentRepository.countByEmployee_EmployeeIdAndStatus(employeeId, Appointment.AppointmentStatus.SCHEDULED);
+        int totalAppointments = scheduledAppointments + completedAppointments;
+        EmployeeAppointmentStatsDTO stats = new EmployeeAppointmentStatsDTO();
+        stats.setTodaysAppointments(todaysAppointments);
+        stats.setTotalAppointments(totalAppointments);
+        stats.setCompletedAppointments(completedAppointments);
+        stats.setPendingAppointments(pendingAppointments);
+        return stats;
+    }
     public List<AppointmentActivityResponse> getAppointmentActivitiesFiltered(
             Appointment.AppointmentStatus status,
             Long customerId,
@@ -156,7 +279,7 @@ public class AppointmentService {
         BigDecimal total = totalServicePrice.subtract(appointment.getDiscountAmount());
         appointment.setTotalAmount(total);
 
-        appointment.setStatus(Appointment.AppointmentStatus.SCHEDULED);
+    appointment.setStatus(Appointment.AppointmentStatus.PENDING);
         appointment.setPaymentStatus(Appointment.PaymentStatus.PENDING);
 
         // Set a temporary appointment number to satisfy NOT NULL constraint
@@ -167,8 +290,7 @@ public class AppointmentService {
         appointment.setAppointmentNumber(appointmentNumber);
         appointment = appointmentRepository.save(appointment);
         
-        // Publish appointment created event to Redis Stream
-        publishAppointmentCreatedEvent(appointment, services, appointmentRequest);
+    // Removed Redis publish from appointment creation
         
         logger.info("Appointment created successfully for customer={}, appointmentNumber={}", customer.getPhoneNumber(), appointment.getAppointmentNumber());
         return mapToAppointmentResponse(appointment);

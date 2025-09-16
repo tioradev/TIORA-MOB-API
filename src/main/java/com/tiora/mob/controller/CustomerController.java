@@ -23,6 +23,36 @@ import org.slf4j.LoggerFactory;
 @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth")
 @RequestMapping("/mobile/customers")
 public class CustomerController {
+    @Autowired
+    private com.tiora.mob.repository.BranchRepository branchRepository;
+
+    @GetMapping("/latest-visits/{customerId}")
+    public ResponseEntity<Map<String, Object>> getLatestVisits(@PathVariable Long customerId) {
+        logger.info("getLatestVisits called for customerId: {}", customerId);
+        String latestVisitJson = customerService.getLatestVisitJsonByCustomerId(customerId);
+        java.util.Map<String, String> visitsMap = new java.util.HashMap<>();
+        java.util.List<java.util.Map<String, Object>> visitsList = new java.util.ArrayList<>();
+        try {
+            if (latestVisitJson != null && !latestVisitJson.isEmpty()) {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                visitsMap = mapper.readValue(latestVisitJson, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
+                for (String branchIdStr : visitsMap.keySet()) {
+                    Long branchId = null;
+                    try { branchId = Long.valueOf(branchIdStr); } catch (Exception ignore) {}
+                    com.tiora.mob.entity.Branch branch = branchId != null ? branchRepository.findById(branchId).orElse(null) : null;
+                    java.util.Map<String, Object> visitInfo = new java.util.HashMap<>();
+                    visitInfo.put("branchId", branchIdStr);
+                    visitInfo.put("visitDate", visitsMap.get(branchIdStr));
+                    visitInfo.put("branchName", branch != null ? branch.getBranchName() : null);
+                    visitInfo.put("ratings", branch != null ? branch.getLatitude() : null); // Replace with branch.getRatings() if available
+                    visitsList.add(visitInfo);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error parsing latestVisitJson for customerId {}: {}", customerId, e.getMessage());
+        }
+        return ResponseEntity.ok(Map.of("customerId", customerId, "latestVisits", visitsList));
+    }
     private static final Logger logger = LoggerFactory.getLogger(CustomerController.class);
 
     @Autowired

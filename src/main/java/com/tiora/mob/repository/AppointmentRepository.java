@@ -1,4 +1,6 @@
+
 package com.tiora.mob.repository;
+import java.time.LocalDateTime;
 
 import com.tiora.mob.entity.*;
 import com.tiora.mob.entity.Appointment.AppointmentStatus;
@@ -12,6 +14,10 @@ import java.util.Optional;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
+       List<Appointment> findByCustomerPaidAndStatusAndCreatedAtBefore(Integer customerPaid, Appointment.AppointmentStatus status, LocalDateTime createdAt);
+       int countByEmployee_EmployeeIdAndAppointmentDate(Long employeeId, java.time.LocalDateTime appointmentDate);
+       int countByEmployee_EmployeeIdAndAppointmentDateBetween(Long employeeId, java.time.LocalDateTime start, java.time.LocalDateTime end);
+       int countByEmployee_EmployeeIdAndStatus(Long employeeId, Appointment.AppointmentStatus status);
     @org.springframework.data.jpa.repository.Query("SELECT a FROM Appointment a " +
            "JOIN FETCH a.salon s " +
            "JOIN FETCH a.employee e " +
